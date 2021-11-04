@@ -73,3 +73,6 @@ class Trainer:
             print('Epoch: ', epoch)
             print('Average training loss: ', average_training_loss)
             print('Average validation loss: ', average_validation_loss)
+
+        device = 'cpu'
+        self.model = self.model.to(device)

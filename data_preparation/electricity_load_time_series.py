@@ -95,19 +95,19 @@ class ElectricityLoadTimeSeriesDataPreparer:
             hourly_context = []
             day_of_the_week_context = []
             if self.include_time_information:
-                if self.is_single_time_point_prediction:
-                    prediction_datetime = time_stamps[index + self.forecasting_horizon_in_hours]
-                    hourly_context = generate_cyclical_time_value(prediction_datetime.hour, DAY_IN_HOURS)
-                    day_of_the_week_context = generate_cyclical_time_value(
-                        datetime.datetime.weekday(prediction_datetime), WEEK_IN_DAYS)
-                else:
-                    predictions_datetime = time_stamps[index:index + self.forecasting_horizon_in_hours]
-                    hourly_context = np.array([generate_cyclical_time_value(date_time.hour, DAY_IN_HOURS)
-                                               for date_time in predictions_datetime]).flatten()
-                    day_of_the_week_context = np.array([generate_cyclical_time_value(datetime
-                                                                                     .datetime.weekday(date_time),
-                                                                                     WEEK_IN_DAYS)
-                                                        for date_time in predictions_datetime]).flatten()
+                # if self.is_single_time_point_prediction:
+                prediction_datetime = time_stamps[index + self.forecasting_horizon_in_hours]
+                hourly_context = generate_cyclical_time_value(prediction_datetime.hour, DAY_IN_HOURS)
+                day_of_the_week_context = generate_cyclical_time_value(
+                    datetime.datetime.weekday(prediction_datetime), WEEK_IN_DAYS)
+                # else:
+                #     predictions_datetime = time_stamps[index:index + self.forecasting_horizon_in_hours]
+                #     hourly_context = np.array([generate_cyclical_time_value(date_time.hour, DAY_IN_HOURS)
+                #                                for date_time in predictions_datetime]).flatten()
+                #     day_of_the_week_context = np.array([generate_cyclical_time_value(datetime
+                #                                                                      .datetime.weekday(date_time),
+                #                                                                      WEEK_IN_DAYS)
+                #                                         for date_time in predictions_datetime]).flatten()
 
             previous_time_series_value: np.array = time_series[index - self.time_series_window_in_hours:index]
             input_row = np.concatenate((previous_time_series_value, hourly_context, day_of_the_week_context))

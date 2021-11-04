@@ -1,17 +1,7 @@
 import torch
 from torch import nn
 
-
-def calculate_mape_loss(output: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-    """
-    Calculates the mean-absolute-percentage-loss. This loss criterion can be usd for the better comparison of result in
-    the case of time-series forecasting.
-
-    :param output: the tensor with predictions
-    :param target: the tensor which is expected
-    :return: the mape metric
-    """
-    return torch.mean(torch.abs((target - output) / target))
+from utils.losses import calculate_mape_loss
 
 
 class MAPELoss(nn.Module):
