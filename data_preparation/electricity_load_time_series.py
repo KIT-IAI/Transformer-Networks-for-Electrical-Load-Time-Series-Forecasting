@@ -3,8 +3,9 @@ import datetime
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
+from workalendar.europe import Germany
 
-from data_preparation.time_features import generate_cyclical_time_value
+from data_preparation.time_features import generate_cyclical_time_value, convert_datetime_to_hour_of_the_week
 
 DAY_IN_HOURS = 24
 WEEK_IN_DAYS = 7
@@ -92,25 +93,39 @@ class ElectricityLoadTimeSeriesDataPreparer:
                 target_rows.append(time_series[index:index + self.forecasting_horizon_in_hours])
 
             # prepare the input
-            hourly_context = []
-            day_of_the_week_context = []
+            hour_of_the_day_context = []
+            hour_of_the_week_context = []
+            is_workday_context = []
+            is_holiday_context = []
+            is_previous_day_workday_context = []
+            is_next_day_workday_context = []
             if self.include_time_information:
-                # if self.is_single_time_point_prediction:
                 prediction_datetime = time_stamps[index + self.forecasting_horizon_in_hours]
-                hourly_context = generate_cyclical_time_value(prediction_datetime.hour, DAY_IN_HOURS)
-                day_of_the_week_context = generate_cyclical_time_value(
-                    datetime.datetime.weekday(prediction_datetime), WEEK_IN_DAYS)
-                # else:
-                #     predictions_datetime = time_stamps[index:index + self.forecasting_horizon_in_hours]
-                #     hourly_context = np.array([generate_cyclical_time_value(date_time.hour, DAY_IN_HOURS)
-                #                                for date_time in predictions_datetime]).flatten()
-                #     day_of_the_week_context = np.array([generate_cyclical_time_value(datetime
-                #                                                                      .datetime.weekday(date_time),
-                #                                                                      WEEK_IN_DAYS)
-                #                                         for date_time in predictions_datetime]).flatten()
+                hour_of_the_day_context = generate_cyclical_time_value(prediction_datetime.hour, DAY_IN_HOURS)
+                hour_of_the_week_context = generate_cyclical_time_value(
+                    convert_datetime_to_hour_of_the_week(prediction_datetime), WEEK_IN_DAYS)
+
+                calendar = Germany()
+                if self.is_single_time_point_prediction:
+                    is_workday_context = [calendar.is_working_day(prediction_datetime)]
+                    is_holiday_context = [calendar.is_holiday(prediction_datetime)]
+                    is_previous_day_workday_context = [
+                        calendar.is_working_day(prediction_datetime - datetime.timedelta(days=1))]
+                    is_next_day_workday_context = [
+                        calendar.is_working_day(prediction_datetime + datetime.timedelta(days=1))]
+                else:
+                    predictions_datetime = time_stamps[index:index + self.forecasting_horizon_in_hours]
+                    is_workday_context = [calendar.is_working_day(date_time) for date_time in predictions_datetime]
+                    is_holiday_context = [calendar.is_holiday(date_time) for date_time in predictions_datetime]
+                    is_previous_day_workday_context = [calendar.is_working_day(date_time - datetime.timedelta(days=1))
+                                                       for date_time in predictions_datetime]
+                    is_next_day_workday_context = [calendar.is_working_day(date_time + datetime.timedelta(days=1))
+                                                   for date_time in predictions_datetime]
 
             previous_time_series_value: np.array = time_series[index - self.time_series_window_in_hours:index]
-            input_row = np.concatenate((previous_time_series_value, hourly_context, day_of_the_week_context))
+            input_row = np.concatenate((previous_time_series_value, hour_of_the_day_context, hour_of_the_week_context,
+                                        is_workday_context, is_holiday_context, is_previous_day_workday_context,
+                                        is_next_day_workday_context))
             input_rows.append(input_row)
         self.prepared_time_series_input = np.array(input_rows)
         self.prepared_time_series_target = np.array(target_rows)

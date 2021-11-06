@@ -1,4 +1,7 @@
+import datetime
 import math
+
+DAY_IN_HOURS = 24
 
 
 def generate_cyclical_time_value(time_value, period_length):
@@ -14,3 +17,13 @@ def generate_cyclical_time_value(time_value, period_length):
         math.sin(2 * math.pi * time_value / period_length),
         math.cos(2 * math.pi * time_value / period_length)
     ]
+
+
+def convert_datetime_to_hour_of_the_week(dt: datetime.datetime) -> int:
+    """
+    Converts the given datetime to the hour of the week.
+
+    :param dt: the datetime to convert
+    :return: the hour of the week in the interval [0, 167]
+    """
+    return datetime.datetime.weekday(dt) * DAY_IN_HOURS + dt.hour
