@@ -92,7 +92,7 @@ class Pipeline:
                                        torch.tensor(prepared_validation_set.outputs, dtype=torch.float32))
         # test_tds = TensorDataset(prepared_test_set.get_prepared_data())
 
-        train_dl = DataLoader(train_tds, batch_size=16, sampler=SequentialSampler(train_tds))
+        train_dl = DataLoader(train_tds, batch_size=160, sampler=SequentialSampler(train_tds))
         validation_dl = DataLoader(validation_tds, batch_size=1028, sampler=SequentialSampler(validation_tds))
 
         if self.model_type == ModelType.LinearRegression:
@@ -106,7 +106,7 @@ class Pipeline:
                                     prepared_train_set.get_number_of_target_variables())
             criterion = MSELoss()
             optimizer = torch.optim.Adam(model.parameters(), lr=0.00002)
-            trainer = Trainer(train_dl, validation_dl, model, criterion, optimizer, 250)
+            trainer = Trainer(train_dl, validation_dl, model, criterion, optimizer, 2000, True, 10)
 
             trainer.train()
 
