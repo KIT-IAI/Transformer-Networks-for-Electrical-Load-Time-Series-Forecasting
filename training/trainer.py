@@ -87,7 +87,7 @@ class Trainer:
         epochs: List[TrainingEpoch] = []
 
         epochs_without_validation_loss_decrease = 0
-        previous_average_validation_loss = None
+        minimum_average_validation_loss = float('inf')
         for epoch in range(self.epochs_count):
             # training phase
             self.model.train()
@@ -123,16 +123,16 @@ class Trainer:
             average_validation_loss = total_validation_loss / len(self.validation_data_loader)
 
             if self.use_early_stopping:
-                if previous_average_validation_loss and previous_average_validation_loss <= average_validation_loss:
+                if minimum_average_validation_loss <= average_validation_loss:
                     epochs_without_validation_loss_decrease += 1
                 else:
                     epochs_without_validation_loss_decrease = 0
+                    minimum_average_validation_loss = average_validation_loss
 
                 if epochs_without_validation_loss_decrease > self.early_stopping_patience:
                     print('Early stopping has happened at epoch', epoch)
                     break
 
-            previous_average_validation_loss = average_validation_loss
             print('Epoch: ', epoch)
             print('Average training loss: ', average_training_loss)
             print('Average validation loss: ', average_validation_loss)
