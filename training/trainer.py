@@ -1,6 +1,48 @@
+from typing import List
+
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
+
+
+class TrainingEpoch:
+
+    def __init__(self, epoch_number, training_loss: float, validation_loss):
+        self.epoch_number = epoch_number
+        self.training_loss = training_loss
+        self.validation_loss = validation_loss
+
+    def __str__(self):
+        return str(self.__dict__)
+
+    def serialize(self):
+        return {
+            'epochNumber': self.epoch_number,
+            'trainingLoss': self.training_loss,
+            'validationLoss': self.training_loss
+        }
+
+
+class TrainingReport:
+
+    def __init__(self, epochs: List[TrainingEpoch]):
+        self.epochs = epochs
+
+    def __str__(self):
+        return str(
+            {
+                'lossCriterion': 'MSE',
+                'optimizer': 'Adam',
+                'epochs': [epoch.serialize() for epoch in self.epochs]
+            }
+        )
+
+    def serialize(self):
+        return {
+            'lossCriterion': 'MSE',
+            'optimizer': 'Adam',
+            'epochs': [epoch.serialize() for epoch in self.epochs]
+        }
 
 
 class Trainer:
@@ -34,13 +76,15 @@ class Trainer:
         self.use_early_stopping = use_early_stopping
         self.early_stopping_patience = early_stopping_patience
 
-    def train(self) -> None:
+    def train(self) -> TrainingReport:
         """
         Starts the training process, which runs n epochs.
         """
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
         print('Used device: ', device)
         self.model = self.model.to(device)
+
+        epochs: List[TrainingEpoch] = []
 
         epochs_without_validation_loss_decrease = 0
         previous_average_validation_loss = None
@@ -93,5 +137,9 @@ class Trainer:
             print('Average training loss: ', average_training_loss)
             print('Average validation loss: ', average_validation_loss)
 
+            epochs.append(TrainingEpoch(epoch, average_training_loss, average_validation_loss))
+
         device = 'cpu'
         self.model = self.model.to(device)
+
+        return TrainingReport(epochs)

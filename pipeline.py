@@ -1,5 +1,4 @@
 import datetime
-import enum
 import os
 from pathlib import Path
 
@@ -13,25 +12,23 @@ from torch.utils.data import TensorDataset, DataLoader, SequentialSampler
 from data_loading.time_series import TimeSeriesDataframeLoader, TimeInterval
 from data_preparation.electricity_load_time_series import ElectricityLoadTimeSeriesDataPreparer, PreparedDataset
 from evaluation.evaluator import Evaluator
+from experiments.experiment import Experiment
+from models.model_type import ModelType
 from models.simple_nn import SimpleNeuralNet
 from models.wrappers.pytorch_model_wrapper import PytorchModelWrapper
 from models.wrappers.sklearn_model_wrapper import SklearnModelWrapper
 from training.trainer import Trainer
+from training.training_config import TrainingConfig
 
 UTC_TIMESTAMP = 'utc_timestamp'
 TARGET_VARIABLE = 'DE_transnetbw_load_actual_entsoe_transparency'
 PATH_TO_CSV = os.path.join('data', 'opsd', 'time_series_15min_singleindex.csv')
 
 
-class ModelType(enum.Enum):
-    LinearRegression = 'LinearRegression'
-    SimpleNeuralNet = 'SimpleNeuralNet'
-
-
 class Pipeline:
 
     def __init__(self, model_type: ModelType, forecasting_horizon: int, predict_single_value: bool, window_length: int,
-                 include_time_context: bool):
+                 include_time_context: bool, training_config: TrainingConfig):
         """
         Creates a pipeline.
 
@@ -46,6 +43,9 @@ class Pipeline:
         self.predict_single_value = predict_single_value
         self.window_length = window_length
         self.include_time_context = include_time_context
+        self.training_config = training_config
+
+        self.experiment = None
 
     def prepare_datasets(self, train_df: DataFrame, validation_df: DataFrame,
                          test_df: DataFrame, scaler) -> (PreparedDataset, PreparedDataset, PreparedDataset):
@@ -99,18 +99,19 @@ class Pipeline:
             linear_regression = LinearRegression()
             linear_regression.fit(prepared_train_set.inputs, prepared_train_set.outputs)
 
-            model_wrapper = SklearnModelWrapper(linear_regression)
+            model_wrapper = SklearnModelWrapper(linear_regression, self.model_type)
+            training_report = None
 
         elif self.model_type == ModelType.SimpleNeuralNet:
             model = SimpleNeuralNet(prepared_train_set.get_number_of_input_features(),
                                     prepared_train_set.get_number_of_target_variables())
             criterion = MSELoss()
-            optimizer = torch.optim.Adam(model.parameters(), lr=0.00002)
-            trainer = Trainer(train_dl, validation_dl, model, criterion, optimizer, 2000, True, 10)
+            optimizer = torch.optim.Adam(model.parameters(), lr=self.training_config.learning_rate)
+            trainer = Trainer(train_dl, validation_dl, model, criterion, optimizer, self.training_config.max_epochs,
+                              self.training_config.use_early_stopping, self.training_config.early_stopping_patience)
+            training_report = trainer.train()
 
-            trainer.train()
-
-            model_wrapper = PytorchModelWrapper(model)
+            model_wrapper = PytorchModelWrapper(model, self.model_type)
 
         else:
             print(self.model_type)
@@ -118,8 +119,10 @@ class Pipeline:
             raise Exception('Received a model, which is not included.')
 
         evaluator = Evaluator(model_wrapper, prepared_validation_set, scaler)
-        evaluator.evaluate()
-        pass
+        evaluation = evaluator.evaluate()
+
+        self.experiment = Experiment(model_wrapper, evaluation, self.training_config, training_report)
+        print(str(self.experiment))
 
     def save_to_file(self):
-        pass
+        self.experiment.save_to_json_file()

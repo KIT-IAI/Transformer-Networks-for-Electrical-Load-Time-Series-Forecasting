@@ -35,11 +35,11 @@ def calculate_naive_forecast_loss(time_series: torch.Tensor, seasonal_cycle: int
     """
     absolute_deviation_sum = 0
     for index in range(seasonal_cycle, len(time_series)):
-        absolute_deviation_sum += torch.abs(time_series[index] - time_series[index - seasonal_cycle])
+        absolute_deviation_sum += torch.mean(torch.abs(time_series[index] - time_series[index - seasonal_cycle]))
     return absolute_deviation_sum / (len(time_series) - seasonal_cycle)
 
 
-def calculate_mase_loss(output: torch.Tensor, target: torch.Tensor, seasonal_cycle: int) -> float:
+def calculate_mase_loss(output: torch.Tensor, target: torch.Tensor, seasonal_cycle: int) -> torch.Tensor:
     """
     Calculates the mean-absolute-scaled-error. This loss compares the MAE to the naive forecasting loss.
     If the loss (the division of both) is less than 1, then the model outperforms the naive model. Else the model should
@@ -53,6 +53,4 @@ def calculate_mase_loss(output: torch.Tensor, target: torch.Tensor, seasonal_cyc
     """
     mae_loss = calculate_mae_loss(output, target)
     naive_forecast_loss = calculate_naive_forecast_loss(target, seasonal_cycle)
-    print('MAE:', mae_loss)
-    print('Naive Forecast loss', naive_forecast_loss)
     return mae_loss / naive_forecast_loss
