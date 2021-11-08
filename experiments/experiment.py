@@ -23,19 +23,26 @@ class Experiment:
         self.training_report = training_report
 
     def save_to_json_file(self) -> None:
-        result = {
-            'modelType': str(self.model_wrapper.model_type),
-            'modelWrapper': str(self.model_wrapper),
-            'trainingConfig': self.training_config.__dict__,
-            'trainingReport': self.training_report.serialize(),
-            'evaluation': self.evaluation.__dict__
-        }
         date = str(datetime.datetime.now()) \
             .replace(' ', '_') \
             .replace('-', '_') \
             .replace(':', '_') \
             .replace('.', '_')
         experiment_name = str(self.model_wrapper.model_type) + date
+
+        if self.training_report:
+            serialized_training_report = self.training_report.serialize()
+        else:
+            serialized_training_report = None
+        result = {
+            'experimentName': experiment_name,
+            'modelType': str(self.model_wrapper.model_type),
+            'modelWrapper': str(self.model_wrapper),
+            'trainingConfig': self.training_config.__dict__,
+            'trainingReport': serialized_training_report,
+            'evaluation': self.evaluation.__dict__
+        }
+
         file_path = os.path.join('experiments', 'archive', experiment_name + JSON_FILE_ENDING)
 
         with open(file_path, 'w') as fp:

@@ -19,7 +19,7 @@ class TrainingEpoch:
         return {
             'epochNumber': self.epoch_number,
             'trainingLoss': self.training_loss,
-            'validationLoss': self.training_loss
+            'validationLoss': self.validation_loss
         }
 
 
