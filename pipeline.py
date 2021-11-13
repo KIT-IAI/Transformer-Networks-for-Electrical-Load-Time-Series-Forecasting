@@ -6,7 +6,8 @@ import torch
 from pandas import DataFrame
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
-from torch.nn import MSELoss
+from torch.nn import L1Loss
+from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import TensorDataset, DataLoader, SequentialSampler
 
 from data_loading.time_series import TimeSeriesDataframeLoader, TimeInterval
@@ -92,8 +93,8 @@ class Pipeline:
                                        torch.tensor(prepared_validation_set.outputs, dtype=torch.float32))
         # test_tds = TensorDataset(prepared_test_set.get_prepared_data())
 
-        train_dl = DataLoader(train_tds, batch_size=160, sampler=SequentialSampler(train_tds))
-        validation_dl = DataLoader(validation_tds, batch_size=1028, sampler=SequentialSampler(validation_tds))
+        train_dl = DataLoader(train_tds, batch_size=80, sampler=SequentialSampler(train_tds))
+        validation_dl = DataLoader(validation_tds, batch_size=80, sampler=SequentialSampler(validation_tds))
 
         if self.model_type == ModelType.LinearRegression:
             linear_regression = LinearRegression()
@@ -105,10 +106,12 @@ class Pipeline:
         elif self.model_type == ModelType.SimpleNeuralNet:
             model = SimpleNeuralNet(prepared_train_set.get_number_of_input_features(),
                                     prepared_train_set.get_number_of_target_variables())
-            criterion = MSELoss()
-            optimizer = torch.optim.Adam(model.parameters(), lr=self.training_config.learning_rate)
+            criterion = L1Loss()
+            optimizer = torch.optim.AdamW(model.parameters(), lr=self.training_config.learning_rate)
+            scheduler = StepLR(optimizer, 1, 0.95)
             trainer = Trainer(train_dl, validation_dl, model, criterion, optimizer, self.training_config.max_epochs,
-                              self.training_config.use_early_stopping, self.training_config.early_stopping_patience)
+                              scheduler, self.training_config.use_early_stopping,
+                              self.training_config.early_stopping_patience)
             training_report = trainer.train()
 
             model_wrapper = PytorchModelWrapper(model, self.model_type)

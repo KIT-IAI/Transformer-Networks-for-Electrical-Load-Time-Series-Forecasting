@@ -22,9 +22,9 @@ def parse_arguments():
                         help="How many historical values of the time series are used as input for a forecast.")
     parser.add_argument('--include_time_context', type=bool, required=False, default=True,
                         help="Indicates whether the time information is used as additional input.")
-    parser.add_argument('--learning_rate', type=float, required=False, default=0.00002,
+    parser.add_argument('--learning_rate', type=float, required=False, default=0.0002,
                         help="The learning rate for PyTorch model-training.")
-    parser.add_argument('--max_epochs', type=int, required=False, default=2,
+    parser.add_argument('--max_epochs', type=int, required=False, default=2000,
                         help="The maximum of number of epochs which are executed.")
     parser.add_argument('--use_early_stopping', type=bool, required=False, default=True,
                         help="Indicates whether the training should stop if the loss does not decreases.")

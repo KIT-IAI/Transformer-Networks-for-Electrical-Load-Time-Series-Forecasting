@@ -2,6 +2,7 @@ from typing import List
 
 import torch
 from torch import nn
+from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader
 
 
@@ -31,16 +32,16 @@ class TrainingReport:
     def __str__(self):
         return str(
             {
-                'lossCriterion': 'MSE',
-                'optimizer': 'Adam',
+                'lossCriterion': 'MAE',
+                'optimizer': 'AdamW',
                 'epochs': [epoch.serialize() for epoch in self.epochs]
             }
         )
 
     def serialize(self):
         return {
-            'lossCriterion': 'MSE',
-            'optimizer': 'Adam',
+            'lossCriterion': 'MAE',
+            'optimizer': 'AdamW',
             'epochs': [epoch.serialize() for epoch in self.epochs]
         }
 
@@ -52,8 +53,8 @@ class Trainer:
     """
 
     def __init__(self, train_data_loader: DataLoader, validation_data_loader: DataLoader, model: nn.Module,
-                 loss_criterion, optimizer, epochs_count: int, use_early_stopping: bool,
-                 early_stopping_patience: int = 0):
+                 loss_criterion, optimizer, epochs_count: int, learning_rate_scheduler: StepLR,
+                 use_early_stopping: bool, early_stopping_patience: int = 0):
         """
         Creates a Trainer.
 
@@ -75,6 +76,7 @@ class Trainer:
         self.epochs_count = epochs_count
         self.use_early_stopping = use_early_stopping
         self.early_stopping_patience = early_stopping_patience
+        self.learning_rate_scheduler = learning_rate_scheduler
 
     def train(self) -> TrainingReport:
         """
@@ -118,6 +120,8 @@ class Trainer:
 
                     validation_loss = self.loss_criterion(output, targets)
                     total_validation_loss += validation_loss.item()
+
+            self.learning_rate_scheduler.step()
 
             average_training_loss = total_training_loss / len(self.train_data_loader)
             average_validation_loss = total_validation_loss / len(self.validation_data_loader)

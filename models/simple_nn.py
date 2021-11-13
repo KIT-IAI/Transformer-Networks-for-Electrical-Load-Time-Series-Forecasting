@@ -15,15 +15,11 @@ class SimpleNeuralNet(nn.Module):
         """
         super().__init__()
         self.layers = nn.Sequential(
-            nn.Linear(number_of_input_features, 256),
+            nn.Linear(number_of_input_features, 2048),
             nn.ReLU(),
-            nn.Linear(256, 64),
+            nn.Linear(2048, 2048),
             nn.ReLU(),
-            nn.Linear(64, 32),
-            nn.ReLU(),
-            nn.Linear(32, 16),
-            nn.ReLU(),
-            nn.Linear(16, number_of_target_variables)
+            nn.Linear(2048, number_of_target_variables)
         )
 
     def forward(self, x):
