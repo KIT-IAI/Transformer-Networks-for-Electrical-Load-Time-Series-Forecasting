@@ -1,12 +1,8 @@
-import json
 from typing import Dict
 
-import matplotlib.pyplot as plt
 import torch
 from sklearn.preprocessing import StandardScaler
 
-from data_preparation.electricity_load_time_series import PreparedDataset
-from models.wrappers.base_model_wrapper import BaseModelWrapper
 from utils.losses import calculate_mase_loss, calculate_mape_loss
 
 
@@ -29,22 +25,19 @@ class Evaluator:
     Provides the possibility to evaluate trained models on test data (or validation data after training)
     """
 
-    def __init__(self, trained_model: BaseModelWrapper, prepared_dataset: PreparedDataset, scaler: StandardScaler):
-        self.trained_model = trained_model
-        self.prepared_dataset = prepared_dataset
+    def __init__(self, model_outputs: torch.Tensor, targets: torch.Tensor, scaler: StandardScaler,
+                 number_of_target_variables: int):
+        self.model_outputs = model_outputs
+        self.targets = targets
         self.scaler = scaler
+        self.number_of_target_variables = number_of_target_variables
 
     def evaluate(self) -> Evaluation:
         """
         :return: the evaluation
         """
-        inputs = torch.Tensor(self.prepared_dataset.inputs)
-        targets = torch.Tensor(self.prepared_dataset.outputs)
-
-        output = self.trained_model.predict(inputs).detach().numpy()
-
-        unscaled_output = self.scaler.inverse_transform(output)
-        expected_unscaled_output = self.scaler.inverse_transform(targets)
+        unscaled_output = self.scaler.inverse_transform(self.model_outputs)
+        expected_unscaled_output = self.scaler.inverse_transform(self.targets)
 
         # calculate the mean absolute percentage loss on the rescaled predictions
         mape_loss = calculate_mape_loss(torch.Tensor(unscaled_output), torch.Tensor(expected_unscaled_output)).item()
@@ -55,8 +48,8 @@ class Evaluator:
 
         mape_losses_by_prediction_variable: Dict[str, float] = dict()
         mase_losses_by_prediction_variable: Dict[str, float] = dict()
-        if self.prepared_dataset.get_number_of_target_variables() > 1:
-            for index in range(0, self.prepared_dataset.get_number_of_target_variables()):
+        if self.number_of_target_variables > 1:
+            for index in range(0, self.number_of_target_variables):
                 t1 = torch.Tensor(expected_unscaled_output[:, index])
                 t2 = torch.Tensor(unscaled_output[:, index])
                 mape_losses_by_prediction_variable[str(index)] = calculate_mape_loss(t2, t1).item()
