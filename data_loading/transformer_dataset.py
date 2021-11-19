@@ -48,14 +48,9 @@ class TransformerDataset(Dataset, ABC):
         return len(self.rows) - self._time_series_window_in_hours - self._forecasting_horizon_in_hours
 
     def __getitem__(self, index: int):
-        # return self.rows[index:index + self._time_series_window_in_hours], \
-        #        self.rows[index + self._time_series_window_in_hours - self._forecasting_horizon_in_hours + 1
-        #                  : index + self._time_series_window_in_hours + 1], \
-        #        self.rows[index + self._time_series_window_in_hours: index + self._time_series_window_in_hours
-        #                                                             + self._forecasting_horizon_in_hours],
         return self.rows[index:index + self._time_series_window_in_hours], \
-               self.rows[index + self._time_series_window_in_hours: index + self._time_series_window_in_hours
-                                                                    + self._forecasting_horizon_in_hours],
+               self.rows[index + self._time_series_window_in_hours:
+                         index + self._time_series_window_in_hours + self._forecasting_horizon_in_hours],
 
     def _prepare_time_series_data(self) -> None:
         """
@@ -92,22 +87,6 @@ class TransformerDataset(Dataset, ABC):
                 load_data_value,
                 hour_of_the_week_context[0], hour_of_the_week_context[1],
                 hour_of_the_day_context[0], hour_of_the_day_context[1],
-                is_workday_context, is_holiday_context, is_previous_day_workday_context, is_next_day_workday_context
+                is_workday_context, is_holiday_context, is_previous_day_workday_context, is_next_day_workday_context,
             ])
         self.rows = torch.tensor(np.array(self.rows, dtype=np.float32))
-        # # create the input and target
-        # time_series = np.array([np.array([d], dtype=np.float32) for d in scaled_load_data])
-        # time_series[0] = 0
-        #
-        # # create the labels
-        # t2 = np.array([[time_stamp.hour / 23 - 0.5, time_stamp.weekday() / 6 - 0.5,
-        #                 time_stamp.month / 12 - 0.5, time_stamp.day / 31 - 0.5] for time_stamp in time_stamps])
-        #
-        # e = []
-        # for index in range(self._time_series_window_in_hours, len(time_series) - self._forecasting_horizon_in_hours):
-        #     seq_x = time_series[index - self._time_series_window_in_hours:index]
-        #     seq_x_mark = t2[index - self._time_series_window_in_hours:index]
-        #     seq_y = time_series[index:index + self._forecasting_horizon_in_hours]
-        #     seq_y_mark = t2[index:index + self._forecasting_horizon_in_hours]
-        #     e.append(np.array([seq_x, seq_y, seq_x_mark, seq_y_mark]))
-        # self.elements = np.array(e)

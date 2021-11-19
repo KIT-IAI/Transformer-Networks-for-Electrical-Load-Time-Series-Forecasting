@@ -54,16 +54,6 @@ class TransformerTrainer(Trainer, ABC):
             # plt.show()
 
         return total_training_loss / len(self.train_data_loader)
-        # for batch_x, batch_y, batch_x_mark, batch_y_mark in self.train_data_loader:
-        #     self.optimizer.zero_grad()
-        #     pred, true = self._process_one_batch(batch_x, batch_y, batch_x_mark, batch_y_mark, device)
-        #     training_loss = self.loss_criterion(pred, true)
-        #
-        #     training_loss.backward()
-        #     self.optimizer.step()
-        #     total_training_loss += training_loss.item()
-        #
-        # return total_training_loss / len(self.train_data_loader)
 
     def validation_phase(self, device) -> float:
         self.model.eval()
@@ -83,16 +73,6 @@ class TransformerTrainer(Trainer, ABC):
                     start_decoder_input = torch.cat([start_decoder_input[:, :, :], predicted], dim=1).to(device)
                 total_prediction = start_decoder_input[:, 1:, 0].to(device)
                 training_loss = self.loss_criterion(total_prediction, expected)
-
-                # temp_decoder_input = decoder_input[:, :, :].to(device)
-                # for i in range(0, 24):
-                #     predicted = self.model(encoder_input, temp_decoder_input).to(device)
-                #     known_decoder_input = target[:, i:i + 1, 1:].to(device)
-                #     new_predicted = predicted[:, 23:24, 0:1].to(device)
-                #     predicted = torch.cat([new_predicted, known_decoder_input], dim=2).to(device)
-                #     temp_decoder_input = torch.cat([temp_decoder_input[:, 1:, :], predicted], dim=1).to(device)
-                # total_prediction = temp_decoder_input[:, :, 0].to(device)
-                # training_loss = self.loss_criterion(total_prediction, expected)
 
                 print(batch_index, training_loss)
                 plt.plot(total_prediction.to('cpu').detach().numpy()[900:, 5], label='pred')

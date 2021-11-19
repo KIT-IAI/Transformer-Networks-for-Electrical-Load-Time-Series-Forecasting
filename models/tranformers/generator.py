@@ -10,4 +10,4 @@ class Generator(nn.Module):
         self.proj = nn.Linear(d_model, target_features)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return F.relu(self.proj(x))
+        return torch.relu(self.proj(x))

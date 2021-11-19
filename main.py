@@ -1,7 +1,6 @@
 import argparse
 
 from pipeline import Pipeline, ModelType
-from training.training_config import TrainingConfig
 
 
 def parse_arguments():
@@ -45,8 +44,8 @@ def parse_arguments():
     # transformer setting
     parser.add_argument('--transformer_d_model', type=int, required=False, default=9)
     parser.add_argument('--transformer_input_features_count', type=int, required=False, default=9)
-    parser.add_argument('--transformer_num_encoder_layers', type=int, required=False, default=3)
-    parser.add_argument('--transformer_num_decoder_layers', type=int, required=False, default=3)
+    parser.add_argument('--transformer_num_encoder_layers', type=int, required=False, default=1)
+    parser.add_argument('--transformer_num_decoder_layers', type=int, required=False, default=1)
     parser.add_argument('--transformer_dim_feedforward', type=int, required=False, default=36)
     parser.add_argument('--transformer_dropout', type=float, required=False, default=0.1)
     parser.add_argument('--transformer_attention_heads', type=int, required=False, default=3)
@@ -56,10 +55,7 @@ def parse_arguments():
 
 def main():
     arguments = parse_arguments()
-    training_config = TrainingConfig(arguments.learning_rate, arguments.max_epochs, arguments.use_early_stopping,
-                                     arguments.early_stopping_patience)
-    pipeline = Pipeline(ModelType[arguments.model], arguments.forecasting_horizon, arguments.predict_single_value,
-                        arguments.time_series_window, arguments.include_time_context, training_config, arguments)
+    pipeline = Pipeline(ModelType[arguments.model], arguments)
     pipeline.start()
     pipeline.save_to_file()
 
