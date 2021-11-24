@@ -27,8 +27,7 @@ class PytorchNeuralNetModelWrapper(BaseModelWrapper, ABC):
         scheduler = StepLR(optimizer, self.args.learning_rate_scheduler_step,
                            self.args.learning_rate_scheduler_gamma)
         trainer = NeuralNetTrainer(train_dl, validation_dl, self.model, criterion, optimizer,
-                                   self.args.max_epochs, scheduler, self.args.use_early_stopping,
-                                   self.args.early_stopping_patience)
+                                   self.args.max_epochs, scheduler, self.args)
         return trainer.train()
 
     def predict(self, dataset: StandardDataset) -> (torch.Tensor, torch.Tensor):

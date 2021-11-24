@@ -15,8 +15,7 @@ class TransformerTrainer(Trainer, ABC):
     """
 
     def __init__(self, train_data_loader: DataLoader, validation_data_loader: DataLoader, model: nn.Module,
-                 loss_criterion, optimizer, epochs_count: int, learning_rate_scheduler: StepLR,
-                 use_early_stopping: bool, early_stopping_patience: int = 0):
+                 loss_criterion, optimizer, epochs_count: int, learning_rate_scheduler: StepLR, args):
         """
         Creates a TransformerTrainer.
 
@@ -26,11 +25,9 @@ class TransformerTrainer(Trainer, ABC):
         :param loss_criterion:          can be any criterion to measure the loss of predictions
         :param optimizer:               the algorithm to optimize the weights
         :param epochs_count:            how many epochs are executed
-        :param use_early_stopping:      whether the training process should stop if the validation does not decreases
-        :param early_stopping_patience: how many epochs the validation loss has to increase to execute early stopping
         """
         super().__init__(train_data_loader, validation_data_loader, model, loss_criterion, optimizer, epochs_count,
-                         learning_rate_scheduler, use_early_stopping, early_stopping_patience)
+                         learning_rate_scheduler, args)
 
     def train_phase(self, device) -> float:
         self.model.train()
@@ -39,19 +36,11 @@ class TransformerTrainer(Trainer, ABC):
             encoder_input = encoder_input.to(device)
             decoder_input = decoder_input.to(device)
             self.optimizer.zero_grad()
-            expected = decoder_input[:, :, 0]
-            src_mask = create_mask(168).to(device)
-            target_mask = create_mask(24).to(device)
-            decoder_input = torch.cat([encoder_input[:, 167:168, :], decoder_input[:, :23, :]], dim=1)
-            predicted = torch.reshape(self.model(encoder_input, decoder_input, src_mask, target_mask), expected.shape)
+            predicted, expected = self.execute_model_on_batch(encoder_input, decoder_input, device)
             training_loss = self.loss_criterion(predicted, expected)
-
             training_loss.backward()
             self.optimizer.step()
             total_training_loss += training_loss.item()
-            # plt.plot(predicted.to('cpu').detach().numpy()[0])
-            # plt.plot(expected.to('cpu').detach().numpy()[0])
-            # plt.show()
 
         return total_training_loss / len(self.train_data_loader)
 
@@ -62,26 +51,33 @@ class TransformerTrainer(Trainer, ABC):
             for batch_index, (encoder_input, decoder_input) in enumerate(self.validation_data_loader):
                 encoder_input = encoder_input.to(device)
                 decoder_input = decoder_input.to(device)
-                expected = decoder_input[:, :, 0].to(device)
 
-                start_decoder_input = encoder_input[:, 167:168, :].to(device)
-                for i in range(0, 24):
-                    predicted = self.model(encoder_input, start_decoder_input).to(device)
-                    known_decoder_input = decoder_input[:, i:i + 1, 1:].to(device)
-                    new_predicted = predicted[:, i:i+1, 0:1].to(device)
-                    predicted = torch.cat([new_predicted, known_decoder_input], dim=2).to(device)
-                    start_decoder_input = torch.cat([start_decoder_input[:, :, :], predicted], dim=1).to(device)
-                total_prediction = start_decoder_input[:, 1:, 0].to(device)
-                training_loss = self.loss_criterion(total_prediction, expected)
+                predicted, expected = self.execute_model_on_batch(encoder_input, decoder_input, device)
+                validation_loss = self.loss_criterion(predicted, expected)
 
-                print(batch_index, training_loss)
-                plt.plot(total_prediction.to('cpu').detach().numpy()[900:, 5], label='pred')
-                plt.plot(expected.to('cpu').detach().numpy()[900:, 5], label='expected')
-                plt.legend(loc='upper left')
-                plt.show()
-                total_validation_loss += training_loss.item()
+                if batch_index % 30 == 0:
+                    print(batch_index, validation_loss)
+                    plt.plot(predicted.to('cpu').detach().numpy()[:, 1], label='pred')
+                    plt.plot(expected.to('cpu').detach().numpy()[:, 1], label='expected')
+                    plt.legend(loc='upper left')
+                    plt.show()
+                total_validation_loss += validation_loss.item()
 
         return total_validation_loss / len(self.validation_data_loader)
+
+    def execute_model_on_batch(self, encoder_input: torch.Tensor, decoder_input: torch.Tensor,
+                               device: str) -> [torch.Tensor, torch.Tensor]:
+        batch_size = encoder_input.shape[0]
+        expected = decoder_input[:, self.args.transformer_labels_count:, 0]
+        u = decoder_input[:, :, 1:]
+        o1 = decoder_input[:, :self.args.transformer_labels_count, 0:1]
+        o2 = torch.zeros([batch_size, self.args.forecasting_horizon, 1]).to(device)
+        adjusted_decoder_input = torch.cat([torch.cat([o1, o2], dim=1), u], dim=2).to(device)
+        predicted = torch.reshape(self.model(encoder_input, adjusted_decoder_input),
+                                  torch.Size([batch_size,
+                                              self.args.transformer_labels_count + self.args.forecasting_horizon]))
+        target_predicted = predicted[:, self.args.transformer_labels_count:]
+        return target_predicted, expected
 
 
 def create_mask(size):

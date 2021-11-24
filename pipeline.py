@@ -78,11 +78,11 @@ class Pipeline:
 
         elif self.model_type == ModelType.TimeSeriesTransformer:
             train_dataset = TransformerDataset(train, UTC_TIMESTAMP, TARGET_VARIABLE, self.window_length,
-                                               self.forecasting_horizon, self.predict_single_value,
-                                               self.include_time_context, scaler, True)
+                                               self.forecasting_horizon, self.args.transformer_labels_count,
+                                               self.predict_single_value, self.include_time_context, scaler, True)
             validation_dataset = TransformerDataset(validation, UTC_TIMESTAMP, TARGET_VARIABLE, self.window_length,
-                                                    self.forecasting_horizon, self.predict_single_value,
-                                                    self.include_time_context, scaler, False)
+                                                    self.forecasting_horizon, self.args.transformer_labels_count,
+                                                    self.predict_single_value, self.include_time_context, scaler, False)
 
             model = TimeSeriesTransformer(d_model=self.args.transformer_d_model,
                                           input_features_count=self.args.transformer_input_features_count,

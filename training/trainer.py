@@ -54,8 +54,7 @@ class Trainer(ABC):
     """
 
     def __init__(self, train_data_loader: DataLoader, validation_data_loader: DataLoader, model: nn.Module,
-                 loss_criterion, optimizer, epochs_count: int, learning_rate_scheduler: StepLR,
-                 use_early_stopping: bool, early_stopping_patience: int = 0):
+                 loss_criterion, optimizer, epochs_count: int, learning_rate_scheduler: StepLR, args):
         """
         Creates a Trainer.
 
@@ -65,8 +64,6 @@ class Trainer(ABC):
         :param loss_criterion:          can be any criterion to measure the loss of predictions
         :param optimizer:               the algorithm to optimize the weights
         :param epochs_count:            how many epochs are executed
-        :param use_early_stopping:      whether the training process should stop if the validation does not decreases
-        :param early_stopping_patience: how many epochs the validation loss has to increase to execute early stopping
         """
         self.train_data_loader = train_data_loader
         self.validation_data_loader = validation_data_loader
@@ -75,9 +72,8 @@ class Trainer(ABC):
         self.optimizer = optimizer
         self.train_data_loader = train_data_loader
         self.epochs_count = epochs_count
-        self.use_early_stopping = use_early_stopping
-        self.early_stopping_patience = early_stopping_patience
         self.learning_rate_scheduler = learning_rate_scheduler
+        self.args = args
 
     def train(self) -> TrainingReport:
         """
@@ -100,14 +96,14 @@ class Trainer(ABC):
 
             self.learning_rate_scheduler.step()
 
-            if self.use_early_stopping:
+            if self.args.use_early_stopping:
                 if minimum_average_validation_loss <= validation_loss:
                     epochs_without_validation_loss_decrease += 1
                 else:
                     epochs_without_validation_loss_decrease = 0
                     minimum_average_validation_loss = validation_loss
 
-                if epochs_without_validation_loss_decrease > self.early_stopping_patience:
+                if epochs_without_validation_loss_decrease > self.args.early_stopping_patience:
                     print('Early stopping has happened at epoch', epoch)
                     break
 

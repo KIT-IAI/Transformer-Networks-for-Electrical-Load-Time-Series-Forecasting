@@ -19,18 +19,19 @@ class PytorchTransformerModelWrapper(BaseModelWrapper, ABC):
         self.model = model
 
     def train(self, train_dataset: TransformerDataset, validation_dataset: TransformerDataset = None) -> TrainingReport:
-        train_dl = DataLoader(train_dataset, batch_size=1000)
-        validation_dl = DataLoader(validation_dataset, batch_size=1000)
+        train_dl = DataLoader(train_dataset, batch_size=self.args.batch_size, shuffle=True)
+        validation_dl = DataLoader(validation_dataset, batch_size=self.args.batch_size)
 
         criterion = L1Loss()
         optimizer = torch.optim.Adam(self.model.parameters(), lr=self.args.learning_rate, betas=(0.9, 0.98))
         scheduler = StepLR(optimizer, self.args.learning_rate_scheduler_step, self.args.learning_rate_scheduler_gamma)
+
         trainer = TransformerTrainer(train_dl, validation_dl, self.model, criterion, optimizer, self.args.max_epochs,
-                                     scheduler, self.args.use_early_stopping, self.args.early_stopping_patience)
+                                     scheduler, self.args)
         return trainer.train()
 
     def predict(self, dataset: TransformerDataset) -> (torch.Tensor, torch.Tensor):
-        data_loader = DataLoader(dataset, batch_size=1000)
+        data_loader = DataLoader(dataset, batch_size=self.args.batch_size)
 
         self.model.eval()
         with torch.no_grad():
@@ -40,18 +41,20 @@ class PytorchTransformerModelWrapper(BaseModelWrapper, ABC):
             for batch_index, (encoder_input, decoder_input) in enumerate(data_loader):
                 encoder_input = encoder_input.to(device)
                 decoder_input = decoder_input.to(device)
-                expected = decoder_input[:, :, 0]
-                output = torch.cat([output, expected], dim=0)
 
-                start_decoder_input = encoder_input[:, 167:168, :]
-                for i in range(0, 24):
-                    predicted = self.model(encoder_input, start_decoder_input)
-                    known_decoder_input = decoder_input[:, i:i + 1, 1:]
-                    new_predicted = predicted[:, i:i + 1, 0:1]
-                    predicted = torch.cat([new_predicted, known_decoder_input], dim=2)
-                    start_decoder_input = torch.cat([start_decoder_input[:, :, :], predicted], dim=1)
-                total_prediction = start_decoder_input[:, 1:, 0]
-                target = torch.cat([target, total_prediction], dim=0)
+                batch_size = encoder_input.shape[0]
+                expected = decoder_input[:, self.args.transformer_labels_count:, 0]
+                target = torch.cat([target, expected], dim=0)
+
+                u = decoder_input[:, :, 1:]
+                o1 = decoder_input[:, :self.args.transformer_labels_count, 0:1]
+                o2 = torch.zeros([batch_size, self.args.forecasting_horizon, 1]).to(device)
+                adjusted_decoder_input = torch.cat([torch.cat([o1, o2], dim=1), u], dim=2).to(device)
+                predicted = torch.reshape(self.model(encoder_input, adjusted_decoder_input),
+                                          torch.Size([batch_size, self.args.transformer_labels_count
+                                                      + self.args.forecasting_horizon]))
+                predicted = predicted[:, self.args.transformer_labels_count:]
+                output = torch.cat([output, predicted], dim=0)
 
         return output, target
 

@@ -28,7 +28,8 @@ def parse_arguments():
                         help="Indicates whether the time information is used as additional input.")
     parser.add_argument('--learning_rate', type=float, required=False, default=0.0001,
                         help="The learning rate for PyTorch model-training.")
-    parser.add_argument('--max_epochs', type=int, required=False, default=2000,
+    parser.add_argument('--batch_size', type=int, required=False, default=64)
+    parser.add_argument('--max_epochs', type=int, required=False, default=200,
                         help="The maximum of number of epochs which are executed.")
 
     # early stopping
@@ -38,17 +39,18 @@ def parse_arguments():
                         help="The allowed number of epochs with no loss decrease.")
 
     # learning rate scheduling
-    parser.add_argument('--learning_rate_scheduler_step', type=int, required=False, default=5)
+    parser.add_argument('--learning_rate_scheduler_step', type=int, required=False, default=2)
     parser.add_argument('--learning_rate_scheduler_gamma', type=float, required=False, default=0.95)
 
     # transformer setting
-    parser.add_argument('--transformer_d_model', type=int, required=False, default=9)
+    parser.add_argument('--transformer_d_model', type=int, required=False, default=20)
     parser.add_argument('--transformer_input_features_count', type=int, required=False, default=9)
-    parser.add_argument('--transformer_num_encoder_layers', type=int, required=False, default=1)
-    parser.add_argument('--transformer_num_decoder_layers', type=int, required=False, default=1)
-    parser.add_argument('--transformer_dim_feedforward', type=int, required=False, default=36)
-    parser.add_argument('--transformer_dropout', type=float, required=False, default=0.1)
-    parser.add_argument('--transformer_attention_heads', type=int, required=False, default=3)
+    parser.add_argument('--transformer_num_encoder_layers', type=int, required=False, default=3)
+    parser.add_argument('--transformer_num_decoder_layers', type=int, required=False, default=3)
+    parser.add_argument('--transformer_dim_feedforward', type=int, required=False, default=80)
+    parser.add_argument('--transformer_dropout', type=float, required=False, default=0.0)
+    parser.add_argument('--transformer_attention_heads', type=int, required=False, default=4)
+    parser.add_argument('--transformer_labels_count', type=int, required=False, default=24)
 
     return parser.parse_args()
 

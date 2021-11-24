@@ -14,8 +14,7 @@ class NeuralNetTrainer(Trainer, ABC):
     """
 
     def __init__(self, train_data_loader: DataLoader, validation_data_loader: DataLoader, model: nn.Module,
-                 loss_criterion, optimizer, epochs_count: int, learning_rate_scheduler: StepLR,
-                 use_early_stopping: bool, early_stopping_patience: int = 0):
+                 loss_criterion, optimizer, epochs_count: int, learning_rate_scheduler: StepLR, args):
         """
         Creates a NeuralNetTrainer.
 
@@ -25,11 +24,9 @@ class NeuralNetTrainer(Trainer, ABC):
         :param loss_criterion:          can be any criterion to measure the loss of predictions
         :param optimizer:               the algorithm to optimize the weights
         :param epochs_count:            how many epochs are executed
-        :param use_early_stopping:      whether the training process should stop if the validation does not decreases
-        :param early_stopping_patience: how many epochs the validation loss has to increase to execute early stopping
         """
         super().__init__(train_data_loader, validation_data_loader, model, loss_criterion, optimizer, epochs_count,
-                         learning_rate_scheduler, use_early_stopping, early_stopping_patience)
+                         learning_rate_scheduler, args)
 
     def train_phase(self, device) -> float:
         self.model.train()

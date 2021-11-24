@@ -18,7 +18,7 @@ class TransformerDataset(Dataset, ABC):
     """
 
     def __init__(self, df: pd.DataFrame, time_variable: str, target_variable: str, time_series_window_in_hours: int,
-                 forecasting_horizon_in_hours: int, is_single_time_point_prediction: bool,
+                 forecasting_horizon_in_hours: int, labels_count: int, is_single_time_point_prediction: bool,
                  include_time_information: bool, time_series_scaler: StandardScaler, is_training_set: bool):
         """
         Creates the data-preparer.
@@ -26,6 +26,7 @@ class TransformerDataset(Dataset, ABC):
         :param df:                              contains the raw data to prepare
         :param time_series_window_in_hours:     how many time-series values are used as input
         :param forecasting_horizon_in_hours:    how far the prediction reaches
+        :param labels_count:                    how many labels are used for forecasting
         :param is_single_time_point_prediction: indicates whether a single time-point is used as target
         :param include_time_information:        indicates whether time-information is included in the input
         :param time_series_scaler               scales the time-series data
@@ -36,6 +37,7 @@ class TransformerDataset(Dataset, ABC):
         self._target_variable = target_variable
         self._time_series_window_in_hours = time_series_window_in_hours
         self._forecasting_horizon_in_hours = forecasting_horizon_in_hours
+        self._labels_count = labels_count
         self._is_single_time_point_prediction = is_single_time_point_prediction
         self._include_time_information = include_time_information
         self._time_series_scaler = time_series_scaler
@@ -49,7 +51,7 @@ class TransformerDataset(Dataset, ABC):
 
     def __getitem__(self, index: int):
         return self.rows[index:index + self._time_series_window_in_hours], \
-               self.rows[index + self._time_series_window_in_hours:
+               self.rows[index + self._time_series_window_in_hours - self._labels_count:
                          index + self._time_series_window_in_hours + self._forecasting_horizon_in_hours],
 
     def _prepare_time_series_data(self) -> None:
