@@ -23,7 +23,7 @@ class PytorchTransformerModelWrapper(BaseModelWrapper, ABC):
         validation_dl = DataLoader(validation_dataset, batch_size=self.args.batch_size)
 
         criterion = L1Loss()
-        optimizer = torch.optim.Adam(self.model.parameters(), lr=self.args.learning_rate, betas=(0.9, 0.98))
+        optimizer = torch.optim.Adam(self.model.parameters(), lr=self.args.learning_rate)
         scheduler = StepLR(optimizer, self.args.learning_rate_scheduler_step, self.args.learning_rate_scheduler_gamma)
 
         trainer = TransformerTrainer(train_dl, validation_dl, self.model, criterion, optimizer, self.args.max_epochs,

@@ -78,6 +78,7 @@ class TransformerDataset(Dataset, ABC):
             time_stamp = time_stamps[index]
             hour_of_the_day_context = generate_cyclical_time_value(time_stamp.hour, 23)
             hour_of_the_week_context = generate_cyclical_time_value(convert_datetime_to_hour_of_the_week(time_stamp), 6)
+            week_of_the_year_context = generate_cyclical_time_value(time_stamp.weekofyear, 53)
 
             calendar = Germany()
             is_workday_context = calendar.is_working_day(time_stamp)
@@ -89,6 +90,7 @@ class TransformerDataset(Dataset, ABC):
                 load_data_value,
                 hour_of_the_week_context[0], hour_of_the_week_context[1],
                 hour_of_the_day_context[0], hour_of_the_day_context[1],
+                week_of_the_year_context[0], week_of_the_year_context[1],
                 is_workday_context, is_holiday_context, is_previous_day_workday_context, is_next_day_workday_context,
             ])
         self.rows = torch.tensor(np.array(self.rows, dtype=np.float32))

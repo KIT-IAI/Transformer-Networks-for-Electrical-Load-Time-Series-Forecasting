@@ -69,7 +69,7 @@ class PositionalEncoding(nn.Module):
 
 class TotalEmbedding(nn.Module):
 
-    def __init__(self, d_model: int, value_features: int, time_features: int):
+    def __init__(self, d_model: int, value_features: int, time_features: int, dropout: float):
         super(TotalEmbedding, self).__init__()
 
         self.value_features = value_features
@@ -80,6 +80,7 @@ class TotalEmbedding(nn.Module):
         self.positional_encoding = PositionalEncoding(d_model)
 
         self.linear_embedding_weight = nn.Linear(3, 1)
+        self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, x: Tensor):
         """
@@ -90,7 +91,7 @@ class TotalEmbedding(nn.Module):
         value_embedded = self.value_embedding(x[:, :, 0:self.value_features])
         time_embedded = self.time_embedding(x[:, :, -self.time_features:])
         pe = self.positional_encoding(x)
-        return value_embedded + time_embedded + pe
+        return self.dropout(value_embedded + time_embedded + pe)
 
 
 class TimeSeriesTransformer(nn.Module):
@@ -101,8 +102,8 @@ class TimeSeriesTransformer(nn.Module):
         self.transformer = nn.Transformer(d_model, attention_heads, num_encoder_layers, num_decoder_layers,
                                           batch_first=True, dim_feedforward=dim_feedforward, dropout=dropout)
         self.projection = nn.Linear(d_model, 1, bias=True)
-        self.encoder_embedding = TotalEmbedding(d_model, 1, input_features_count - 1)
-        self.decoder_embedding = TotalEmbedding(d_model, 1, input_features_count - 1)
+        self.encoder_embedding = TotalEmbedding(d_model, 1, input_features_count - 1, dropout)
+        self.decoder_embedding = TotalEmbedding(d_model, 1, input_features_count - 1, dropout)
         self.relu = nn.ReLU()
 
     def forward(self, x_enc, x_dec, src_mask=None, tgt_mask=None, dec_enc_mask=None):
