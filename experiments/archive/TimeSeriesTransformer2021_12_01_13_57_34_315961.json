@@ -1,0 +1,219 @@
+{
+  "experimentName": "TimeSeriesTransformer2021_12_01_13_57_34_315961",
+  "modelType": "TimeSeriesTransformer",
+  "modelWrapper": "TimeSeriesTransformer(\n  (transformer): Transformer(\n    (encoder): TransformerEncoder(\n      (layers): ModuleList(\n        (0): TransformerEncoderLayer(\n          (self_attn): MultiheadAttention(\n            (out_proj): NonDynamicallyQuantizableLinear(in_features=160, out_features=160, bias=True)\n          )\n          (linear1): Linear(in_features=160, out_features=160, bias=True)\n          (dropout): Dropout(p=0.01, inplace=False)\n          (linear2): Linear(in_features=160, out_features=160, bias=True)\n          (norm1): LayerNorm((160,), eps=1e-05, elementwise_affine=True)\n          (norm2): LayerNorm((160,), eps=1e-05, elementwise_affine=True)\n          (dropout1): Dropout(p=0.01, inplace=False)\n          (dropout2): Dropout(p=0.01, inplace=False)\n        )\n        (1): TransformerEncoderLayer(\n          (self_attn): MultiheadAttention(\n            (out_proj): NonDynamicallyQuantizableLinear(in_features=160, out_features=160, bias=True)\n          )\n          (linear1): Linear(in_features=160, out_features=160, bias=True)\n          (dropout): Dropout(p=0.01, inplace=False)\n          (linear2): Linear(in_features=160, out_features=160, bias=True)\n          (norm1): LayerNorm((160,), eps=1e-05, elementwise_affine=True)\n          (norm2): LayerNorm((160,), eps=1e-05, elementwise_affine=True)\n          (dropout1): Dropout(p=0.01, inplace=False)\n          (dropout2): Dropout(p=0.01, inplace=False)\n        )\n        (2): TransformerEncoderLayer(\n          (self_attn): MultiheadAttention(\n            (out_proj): NonDynamicallyQuantizableLinear(in_features=160, out_features=160, bias=True)\n          )\n          (linear1): Linear(in_features=160, out_features=160, bias=True)\n          (dropout): Dropout(p=0.01, inplace=False)\n          (linear2): Linear(in_features=160, out_features=160, bias=True)\n          (norm1): LayerNorm((160,), eps=1e-05, elementwise_affine=True)\n          (norm2): LayerNorm((160,), eps=1e-05, elementwise_affine=True)\n          (dropout1): Dropout(p=0.01, inplace=False)\n          (dropout2): Dropout(p=0.01, inplace=False)\n        )\n      )\n      (norm): LayerNorm((160,), eps=1e-05, elementwise_affine=True)\n    )\n    (decoder): TransformerDecoder(\n      (layers): ModuleList(\n        (0): TransformerDecoderLayer(\n          (self_attn): MultiheadAttention(\n            (out_proj): NonDynamicallyQuantizableLinear(in_features=160, out_features=160, bias=True)\n          )\n          (multihead_attn): MultiheadAttention(\n            (out_proj): NonDynamicallyQuantizableLinear(in_features=160, out_features=160, bias=True)\n          )\n          (linear1): Linear(in_features=160, out_features=160, bias=True)\n          (dropout): Dropout(p=0.01, inplace=False)\n          (linear2): Linear(in_features=160, out_features=160, bias=True)\n          (norm1): LayerNorm((160,), eps=1e-05, elementwise_affine=True)\n          (norm2): LayerNorm((160,), eps=1e-05, elementwise_affine=True)\n          (norm3): LayerNorm((160,), eps=1e-05, elementwise_affine=True)\n          (dropout1): Dropout(p=0.01, inplace=False)\n          (dropout2): Dropout(p=0.01, inplace=False)\n          (dropout3): Dropout(p=0.01, inplace=False)\n        )\n        (1): TransformerDecoderLayer(\n          (self_attn): MultiheadAttention(\n            (out_proj): NonDynamicallyQuantizableLinear(in_features=160, out_features=160, bias=True)\n          )\n          (multihead_attn): MultiheadAttention(\n            (out_proj): NonDynamicallyQuantizableLinear(in_features=160, out_features=160, bias=True)\n          )\n          (linear1): Linear(in_features=160, out_features=160, bias=True)\n          (dropout): Dropout(p=0.01, inplace=False)\n          (linear2): Linear(in_features=160, out_features=160, bias=True)\n          (norm1): LayerNorm((160,), eps=1e-05, elementwise_affine=True)\n          (norm2): LayerNorm((160,), eps=1e-05, elementwise_affine=True)\n          (norm3): LayerNorm((160,), eps=1e-05, elementwise_affine=True)\n          (dropout1): Dropout(p=0.01, inplace=False)\n          (dropout2): Dropout(p=0.01, inplace=False)\n          (dropout3): Dropout(p=0.01, inplace=False)\n        )\n        (2): TransformerDecoderLayer(\n          (self_attn): MultiheadAttention(\n            (out_proj): NonDynamicallyQuantizableLinear(in_features=160, out_features=160, bias=True)\n          )\n          (multihead_attn): MultiheadAttention(\n            (out_proj): NonDynamicallyQuantizableLinear(in_features=160, out_features=160, bias=True)\n          )\n          (linear1): Linear(in_features=160, out_features=160, bias=True)\n          (dropout): Dropout(p=0.01, inplace=False)\n          (linear2): Linear(in_features=160, out_features=160, bias=True)\n          (norm1): LayerNorm((160,), eps=1e-05, elementwise_affine=True)\n          (norm2): LayerNorm((160,), eps=1e-05, elementwise_affine=True)\n          (norm3): LayerNorm((160,), eps=1e-05, elementwise_affine=True)\n          (dropout1): Dropout(p=0.01, inplace=False)\n          (dropout2): Dropout(p=0.01, inplace=False)\n          (dropout3): Dropout(p=0.01, inplace=False)\n        )\n      )\n      (norm): LayerNorm((160,), eps=1e-05, elementwise_affine=True)\n    )\n  )\n  (projection): Linear(in_features=160, out_features=1, bias=True)\n  (encoder_embedding): TotalEmbedding(\n    (value_embedding): ValueEmbedding(\n      (linear): Linear(in_features=1, out_features=160, bias=True)\n    )\n    (time_embedding): TimeEmbedding(\n      (linear): Linear(in_features=10, out_features=160, bias=True)\n    )\n    (positional_encoding): PositionalEncoding()\n    (linear_embedding_weight): Linear(in_features=3, out_features=1, bias=True)\n    (dropout): Dropout(p=0.01, inplace=False)\n  )\n  (decoder_embedding): TotalEmbedding(\n    (value_embedding): ValueEmbedding(\n      (linear): Linear(in_features=1, out_features=160, bias=True)\n    )\n    (time_embedding): TimeEmbedding(\n      (linear): Linear(in_features=10, out_features=160, bias=True)\n    )\n    (positional_encoding): PositionalEncoding()\n    (linear_embedding_weight): Linear(in_features=3, out_features=1, bias=True)\n    (dropout): Dropout(p=0.01, inplace=False)\n  )\n  (relu): ReLU()\n)",
+  "trainingConfig": {
+    "model": "TimeSeriesTransformer",
+    "forecasting_horizon": 24,
+    "predict_single_value": false,
+    "time_series_window": 168,
+    "include_time_context": true,
+    "learning_rate": 0.0001,
+    "batch_size": 32,
+    "max_epochs": 200,
+    "use_early_stopping": true,
+    "early_stopping_patience": 10,
+    "learning_rate_scheduler_step": 8,
+    "learning_rate_scheduler_gamma": 0.1,
+    "transformer_d_model": 160,
+    "transformer_input_features_count": 11,
+    "transformer_num_encoder_layers": 3,
+    "transformer_num_decoder_layers": 3,
+    "transformer_dim_feedforward": 160,
+    "transformer_dropout": 0.01,
+    "transformer_attention_heads": 8,
+    "transformer_labels_count": 24
+  },
+  "trainingReport": {
+    "lossCriterion": "MAE",
+    "optimizer": "Adam",
+    "epochs": [
+      {
+        "epochNumber": 0,
+        "trainingLoss": 0.1513122238821405,
+        "validationLoss": 0.15271142800686074
+      },
+      {
+        "epochNumber": 1,
+        "trainingLoss": 0.08658038976364861,
+        "validationLoss": 0.11880725693068843
+      },
+      {
+        "epochNumber": 2,
+        "trainingLoss": 0.07627844604133975,
+        "validationLoss": 0.11733897800432212
+      },
+      {
+        "epochNumber": 3,
+        "trainingLoss": 0.07047084022276834,
+        "validationLoss": 0.10773672437323119
+      },
+      {
+        "epochNumber": 4,
+        "trainingLoss": 0.06645549527442485,
+        "validationLoss": 0.11274222203933482
+      },
+      {
+        "epochNumber": 5,
+        "trainingLoss": 0.06322984554914429,
+        "validationLoss": 0.11155565032985673
+      },
+      {
+        "epochNumber": 6,
+        "trainingLoss": 0.060744304045596546,
+        "validationLoss": 0.1089125038333126
+      },
+      {
+        "epochNumber": 7,
+        "trainingLoss": 0.05834378196182204,
+        "validationLoss": 0.1049802620936908
+      },
+      {
+        "epochNumber": 8,
+        "trainingLoss": 0.05315921668365013,
+        "validationLoss": 0.10585570453541047
+      },
+      {
+        "epochNumber": 9,
+        "trainingLoss": 0.05263477710404379,
+        "validationLoss": 0.1048141220139701
+      },
+      {
+        "epochNumber": 10,
+        "trainingLoss": 0.05220509824050846,
+        "validationLoss": 0.10453443657328833
+      },
+      {
+        "epochNumber": 11,
+        "trainingLoss": 0.05193426982755316,
+        "validationLoss": 0.1045633847199714
+      },
+      {
+        "epochNumber": 12,
+        "trainingLoss": 0.05152082606675286,
+        "validationLoss": 0.10554917550075855
+      },
+      {
+        "epochNumber": 13,
+        "trainingLoss": 0.05127584419268019,
+        "validationLoss": 0.10450782836762382
+      },
+      {
+        "epochNumber": 14,
+        "trainingLoss": 0.05095038481294086,
+        "validationLoss": 0.1058584898015234
+      },
+      {
+        "epochNumber": 15,
+        "trainingLoss": 0.0507321230491952,
+        "validationLoss": 0.10429949464915848
+      },
+      {
+        "epochNumber": 16,
+        "trainingLoss": 0.05008070626040446,
+        "validationLoss": 0.10513335766632166
+      },
+      {
+        "epochNumber": 17,
+        "trainingLoss": 0.049975895327424594,
+        "validationLoss": 0.10440075846472338
+      },
+      {
+        "epochNumber": 18,
+        "trainingLoss": 0.0499772559212265,
+        "validationLoss": 0.10481362475721694
+      },
+      {
+        "epochNumber": 19,
+        "trainingLoss": 0.049936010826415585,
+        "validationLoss": 0.10466181207448244
+      },
+      {
+        "epochNumber": 20,
+        "trainingLoss": 0.04988942790192132,
+        "validationLoss": 0.10518230546488246
+      },
+      {
+        "epochNumber": 21,
+        "trainingLoss": 0.04987885585219106,
+        "validationLoss": 0.10513044415570016
+      },
+      {
+        "epochNumber": 22,
+        "trainingLoss": 0.04984746221909482,
+        "validationLoss": 0.10519784413722914
+      },
+      {
+        "epochNumber": 23,
+        "trainingLoss": 0.049834746858287676,
+        "validationLoss": 0.10534336178827641
+      },
+      {
+        "epochNumber": 24,
+        "trainingLoss": 0.04976728763522617,
+        "validationLoss": 0.10489292070269585
+      },
+      {
+        "epochNumber": 25,
+        "trainingLoss": 0.04971486030091696,
+        "validationLoss": 0.1049034267719557
+      }
+    ]
+  },
+  "evaluation": {
+    "total_mape_loss": 0.0238840039819479,
+    "total_mase_loss": 0.38755276799201965,
+    "mape_losses_by_prediction_variable": {
+      "0": 0.017201902344822884,
+      "1": 0.019433852285146713,
+      "2": 0.020408814772963524,
+      "3": 0.021251272410154343,
+      "4": 0.022061115130782127,
+      "5": 0.022676201537251472,
+      "6": 0.023060128092765808,
+      "7": 0.023421410471200943,
+      "8": 0.023781005293130875,
+      "9": 0.024098975583910942,
+      "10": 0.024434460327029228,
+      "11": 0.02472810633480549,
+      "12": 0.024897171184420586,
+      "13": 0.025062812492251396,
+      "14": 0.02521965093910694,
+      "15": 0.02529853582382202,
+      "16": 0.02536485157907009,
+      "17": 0.025504620745778084,
+      "18": 0.025574304163455963,
+      "19": 0.02559806779026985,
+      "20": 0.025568746030330658,
+      "21": 0.025740735232830048,
+      "22": 0.026244476437568665,
+      "23": 0.026584895327687263
+    },
+    "mase_losses_by_prediction_variable": {
+      "0": 0.27885282039642334,
+      "1": 0.31561049818992615,
+      "2": 0.3326241672039032,
+      "3": 0.3465842008590698,
+      "4": 0.35947859287261963,
+      "5": 0.3695450723171234,
+      "6": 0.37605908513069153,
+      "7": 0.3817678987979889,
+      "8": 0.38695284724235535,
+      "9": 0.3916313052177429,
+      "10": 0.39652106165885925,
+      "11": 0.40079447627067566,
+      "12": 0.4035260081291199,
+      "13": 0.40634897351264954,
+      "14": 0.40870553255081177,
+      "15": 0.4097137451171875,
+      "16": 0.41058120131492615,
+      "17": 0.41262319684028625,
+      "18": 0.41384002566337585,
+      "19": 0.41421765089035034,
+      "20": 0.413970023393631,
+      "21": 0.41692039370536804,
+      "22": 0.4249418079853058,
+      "23": 0.4298711121082306
+    }
+  }
+}

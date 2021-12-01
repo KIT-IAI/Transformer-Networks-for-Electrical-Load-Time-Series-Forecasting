@@ -84,7 +84,6 @@ class TotalEmbedding(nn.Module):
 
     def forward(self, x: Tensor):
         """
-
         :param x: tensor of dimension [Batch_Size, Sequence_Length, Features]
         :return: the embedded value
         """
@@ -94,6 +93,23 @@ class TotalEmbedding(nn.Module):
         return self.dropout(value_embedded + time_embedded + pe)
 
 
+class MultipleLinearLayers(nn.Module):
+
+    def __init__(self, d_model: int, d_output):
+        super().__init__()
+        self.linear_layers = []
+        for i in range(0, d_output):
+            self.linear_layers.append(nn.Linear(d_model, 1).to('cuda'))
+
+    def forward(self, x):
+        output = torch.zeros([x.shape[0], x.shape[1]])
+        output = output.to('cuda')
+
+        for i in range(0, x.shape[1]):
+            output[:, i:i+1] = self.linear_layers[i](x[:, i, :])
+        return output
+
+
 class TimeSeriesTransformer(nn.Module):
 
     def __init__(self, d_model: int, input_features_count: int, num_encoder_layers: int, num_decoder_layers: int,
@@ -101,6 +117,7 @@ class TimeSeriesTransformer(nn.Module):
         super().__init__()
         self.transformer = nn.Transformer(d_model, attention_heads, num_encoder_layers, num_decoder_layers,
                                           batch_first=True, dim_feedforward=dim_feedforward, dropout=dropout)
+        # self.projection = MultipleLinearLayers(d_model, 48)
         self.projection = nn.Linear(d_model, 1, bias=True)
         self.encoder_embedding = TotalEmbedding(d_model, 1, input_features_count - 1, dropout)
         self.decoder_embedding = TotalEmbedding(d_model, 1, input_features_count - 1, dropout)
