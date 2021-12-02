@@ -40,7 +40,7 @@ class Experiment:
             'modelWrapper': str(self.model_wrapper),
             'trainingConfig': self.training_config.__dict__,
             'trainingReport': serialized_training_report,
-            'evaluation': self.evaluation.__dict__
+            'evaluation': self.evaluation.serialize()
         }
 
         file_path = os.path.join('experiments', 'archive', experiment_name + JSON_FILE_ENDING)

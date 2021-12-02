@@ -90,6 +90,7 @@ class TransformerTrainer(Trainer, ABC):
                 else:  # generative approach (currently the best)
                     predicted, expected = self.execute_model_on_batch(encoder_input, decoder_input, device)
                     predicted = predicted[:, self.args.transformer_labels_count:]
+                    expected = expected[:, self.args.transformer_labels_count:]
                 validation_loss = self.loss_criterion(predicted, expected)
 
                 if batch_index % 30 == 0:

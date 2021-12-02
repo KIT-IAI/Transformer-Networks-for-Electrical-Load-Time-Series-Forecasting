@@ -94,3 +94,4 @@ class TransformerDataset(Dataset, ABC):
                 is_workday_context, is_holiday_context, is_previous_day_workday_context, is_next_day_workday_context,
             ])
         self.rows = torch.tensor(np.array(self.rows, dtype=np.float32))
+        self.time_labels = np.array(time_stamps[self._time_series_window_in_hours: -self._forecasting_horizon_in_hours])

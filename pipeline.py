@@ -2,6 +2,7 @@ import datetime
 import os
 from pathlib import Path
 
+import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
 from torch.utils.data import Dataset
@@ -101,7 +102,8 @@ class Pipeline:
         training_report = model_wrapper.train(train_dataset, validation_dataset)
         validation_outputs, validation_targets = model_wrapper.predict(validation_dataset)
 
-        evaluator = Evaluator(validation_outputs, validation_targets, scaler, self.forecasting_horizon)
+        time_labels: np.ndarray = validation_dataset.time_labels
+        evaluator = Evaluator(validation_outputs, validation_targets, time_labels, scaler, self.forecasting_horizon)
         evaluation = evaluator.evaluate()
 
         self.experiment = Experiment(model_wrapper, evaluation, self.args, training_report)

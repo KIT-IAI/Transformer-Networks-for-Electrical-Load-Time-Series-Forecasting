@@ -46,6 +46,7 @@ class StandardDataset(Dataset, ABC):
 
         self.prepared_time_series_input: torch.Tensor
         self.prepared_time_series_target: torch.Tensor
+        self.time_labels: np.ndarray
         self._prepare_time_series_data()
 
     def __len__(self) -> int:
@@ -137,3 +138,5 @@ class StandardDataset(Dataset, ABC):
             input_rows.append(input_row)
         self.prepared_time_series_input = torch.tensor(np.array(input_rows), dtype=torch.float32)
         self.prepared_time_series_target = torch.tensor(np.array(target_rows), dtype=torch.float32)
+        self.time_labels = np.array(time_stamps[self._time_series_window_in_hours
+                                                :len(time_series) - self._forecasting_horizon_in_hours])
