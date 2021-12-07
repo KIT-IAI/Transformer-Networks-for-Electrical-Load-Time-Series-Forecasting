@@ -36,9 +36,10 @@ class PytorchTransformerModelWrapper(BaseModelWrapper, ABC):
 
         self.model.eval()
         with torch.no_grad():
-            device = 'cpu'
-            output = torch.tensor([])
-            target = torch.tensor([])
+            device = 'cuda'
+            output = torch.tensor([]).to(device)
+            target = torch.tensor([]).to(device)
+            self.model = self.model.to(device)
             for batch_index, (encoder_input, decoder_input) in enumerate(data_loader):
                 encoder_input = encoder_input.to(device)
                 decoder_input = decoder_input.to(device)
@@ -62,30 +63,43 @@ class PytorchTransformerModelWrapper(BaseModelWrapper, ABC):
                     predicted = start_decoder_input[:, self.args.transformer_labels_count:, 0].to(device)
 
                 elif self.args.transformer_use_auto_regression:
-                    predicted = torch.zeros([batch_size, self.args.forecasting_horizon])
-                    accumulated_encoder_input = torch.zeros([batch_size, self.args.time_series_window,
-                                                             self.args.transformer_input_features_count])
+                    predicted = torch.zeros([batch_size, self.args.forecasting_horizon]).to(device)
+                    accumulated_encoder_input \
+                        = torch.zeros([batch_size,
+                                       self.args.time_series_window + self.args.transformer_labels_count,
+                                       self.args.transformer_input_features_count]).to(device)
                     accumulated_encoder_input[:, :self.args.time_series_window, :] = encoder_input
+                    accumulated_encoder_input[:, -self.args.forecasting_horizon:, 1:] \
+                        = decoder_input[:, self.args.transformer_labels_count:, 1:]
 
-                    adjusted_decoder_input = torch.zeros([batch_size, self.args.transformer_labels_count + 1,
-                                                          self.args.transformer_input_features_count])
-                    adjusted_decoder_input[:, 0:1, :] = decoder_input[:, 0:1, :]
+                    accumulated_decoder_input \
+                        = torch.zeros([batch_size,
+                                       self.args.transformer_labels_count + self.args.forecasting_horizon,
+                                       self.args.transformer_input_features_count]).to(device)
+                    accumulated_decoder_input[:, :self.args.transformer_labels_count, :] \
+                        = decoder_input[:, :self.args.transformer_labels_count, :]
+                    accumulated_decoder_input[:, self.args.transformer_labels_count:, 1:] \
+                        = decoder_input[:, self.args.transformer_labels_count:, 1:]
+
+                    accumulated_decoder_input = accumulated_decoder_input.to(device)
+                    accumulated_encoder_input = accumulated_encoder_input.to(device)
 
                     for i in range(0, self.args.forecasting_horizon):
-                        adjusted_decoder_input[:, 1:2, 1:] = decoder_input[:,
-                                                             self.args.transformer_labels_count:
-                                                             self.args.transformer_labels_count + 1,
-                                                             1:]
+                        target_mask = create_mask(self.args.transformer_labels_count + 1).to(device)
                         new_prediction = torch.reshape(
-                            self.model(encoder_input, adjusted_decoder_input),
+                            self.model(accumulated_encoder_input[:, i:i + self.args.time_series_window],
+                                       accumulated_decoder_input[:, i:i + self.args.transformer_labels_count + 1],
+                                       tgt_mask=target_mask),
                             torch.Size([batch_size, self.args.transformer_labels_count + 1]))
                         predicted[:, i:i + 1] = new_prediction[:, self.args.transformer_labels_count:]
-
-                        accumulated_encoder_input[:,
-                        self.args.time_series_window + i: self.args.time_series_window + i + 1, :] \
-                            = adjusted_decoder_input[:, 0:1, :]
-                        adjusted_decoder_input[:, 0:1, 0] = predicted[:, i:i + 1]  # shift left
-                        adjusted_decoder_input[:, 0:1, 1:] = adjusted_decoder_input[:, 1:2, 1:]
+                        accumulated_decoder_input[:, self.args.transformer_labels_count + i:
+                                                     self.args.transformer_labels_count + i + 1, 0:1] \
+                            = torch.reshape(new_prediction[:, self.args.transformer_labels_count:],
+                                            shape=torch.Size([batch_size, 1, 1]))
+                        accumulated_encoder_input[:, self.args.time_series_window + i:
+                                                     self.args.time_series_window + i + 1, 0:1] \
+                            = torch.reshape(new_prediction[:, self.args.transformer_labels_count:],
+                                            shape=torch.Size([batch_size, 1, 1]))
 
                 else:  # generative approach (currently the preferred way)
                     u = decoder_input[:, :, 1:]
@@ -97,11 +111,11 @@ class PytorchTransformerModelWrapper(BaseModelWrapper, ABC):
 
                     predicted = torch.reshape(self.model(encoder_input, adjusted_decoder_input, tgt_mask=target_mask),
                                               torch.Size([batch_size, self.args.transformer_labels_count
-                                                          + self.args.forecasting_horizon]))
+                                                          + self.args.forecasting_horizon])).to(device)
                     predicted = predicted[:, self.args.transformer_labels_count:]
                 output = torch.cat([output, predicted], dim=0)
 
-        return output, target
+        return output.to('cpu'), target.to('cpu')
 
     def __str__(self):
         return str(self.model)

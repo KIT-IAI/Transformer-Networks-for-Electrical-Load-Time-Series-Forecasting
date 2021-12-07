@@ -46,7 +46,7 @@ class TransformerTrainer(Trainer, ABC):
                     self.model(encoder_input, decoder_input, src_mask, target_mask),
                     torch.Size([encoder_input.shape[0],
                                 self.args.transformer_labels_count + self.args.forecasting_horizon]))
-                predicted = predicted[:, self.args.transformer_labels_count-1:-2]
+                predicted = predicted[:, self.args.transformer_labels_count - 1:-2]
 
             elif self.args.transformer_use_auto_regression:
                 predicted, expected = self.execute_model_one_step_ahead(encoder_input, decoder_input, device)
@@ -86,6 +86,8 @@ class TransformerTrainer(Trainer, ABC):
 
                 elif self.args.transformer_use_auto_regression:
                     predicted, expected = self.execute_model_one_step_ahead(encoder_input, decoder_input, device)
+                    predicted = predicted[:, self.args.transformer_labels_count:]
+                    expected = expected[:, self.args.transformer_labels_count:]
 
                 else:  # generative approach (currently the best)
                     predicted, expected = self.execute_model_on_batch(encoder_input, decoder_input, device)
@@ -121,7 +123,7 @@ class TransformerTrainer(Trainer, ABC):
     def execute_model_one_step_ahead(self, encoder_input: torch.Tensor, decoder_input: torch.Tensor,
                                      device: str) -> [torch.Tensor, torch.Tensor]:
         batch_size = encoder_input.shape[0]
-        expected = decoder_input[:, self.args.transformer_labels_count:self.args.transformer_labels_count + 1, 0]
+        expected = decoder_input[:, :self.args.transformer_labels_count + 1, 0]
         u = decoder_input[:, :-self.args.forecasting_horizon + 1, 1:]
         o1 = decoder_input[:, :self.args.transformer_labels_count, 0:1]
         o2 = torch.zeros([batch_size, 1, 1]).to(device)
@@ -129,7 +131,7 @@ class TransformerTrainer(Trainer, ABC):
         target_mask = create_mask(self.args.transformer_labels_count + 1).to(device)
         predicted = torch.reshape(self.model(encoder_input, adjusted_decoder_input, tgt_mask=target_mask),
                                   torch.Size([batch_size, self.args.transformer_labels_count + 1]))
-        target_predicted = predicted[:, self.args.transformer_labels_count:]
+        target_predicted = predicted[:, :]
         return target_predicted, expected
 
 
