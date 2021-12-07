@@ -15,6 +15,7 @@ from experiments.experiment import Experiment
 from models.model_type import ModelType
 from models.simple_nn import SimpleNeuralNet
 from models.tranformers.transformer import TimeSeriesTransformer
+from models.tranformers.transformer_convolution_attention import TimeSeriesTransformerWithConvolutionalAttention
 from models.wrappers.base_model_wrapper import BaseModelWrapper
 from models.wrappers.pytorch_neural_net_model_wrapper import PytorchNeuralNetModelWrapper
 from models.wrappers.pytorch_transformer_model_wrapper import PytorchTransformerModelWrapper
@@ -77,21 +78,29 @@ class Pipeline:
                                         train_dataset.get_number_of_target_variables())
                 model_wrapper = PytorchNeuralNetModelWrapper(model, self.model_type, self.args)
 
-        elif self.model_type == ModelType.TimeSeriesTransformer:
-            train_dataset = TransformerDataset(train, UTC_TIMESTAMP, TARGET_VARIABLE, self.window_length,
-                                               self.forecasting_horizon, self.args.transformer_labels_count,
-                                               self.predict_single_value, self.include_time_context, scaler, True)
-            validation_dataset = TransformerDataset(validation, UTC_TIMESTAMP, TARGET_VARIABLE, self.window_length,
-                                                    self.forecasting_horizon, self.args.transformer_labels_count,
-                                                    self.predict_single_value, self.include_time_context, scaler, False)
+        elif self.model_type == ModelType.TimeSeriesTransformer \
+                or self.model_type == ModelType.TimeSeriesTransformerWithConvolutionalAttention:
+            train_dataset = TransformerDataset(
+                train, UTC_TIMESTAMP, TARGET_VARIABLE, self.window_length,
+                self.forecasting_horizon, self.args.transformer_labels_count,
+                self.predict_single_value, self.include_time_context, scaler, True)
+            validation_dataset = TransformerDataset(
+                validation, UTC_TIMESTAMP, TARGET_VARIABLE, self.window_length,
+                self.forecasting_horizon, self.args.transformer_labels_count,
+                self.predict_single_value, self.include_time_context, scaler, False)
 
-            model = TimeSeriesTransformer(d_model=self.args.transformer_d_model,
-                                          input_features_count=self.args.transformer_input_features_count,
-                                          num_encoder_layers=self.args.transformer_num_encoder_layers,
-                                          num_decoder_layers=self.args.transformer_num_decoder_layers,
-                                          dim_feedforward=self.args.transformer_dim_feedforward,
-                                          dropout=self.args.transformer_dropout,
-                                          attention_heads=self.args.transformer_attention_heads)
+            if self.model_type == ModelType.TimeSeriesTransformer:
+                m = TimeSeriesTransformer
+            else:
+                m = TimeSeriesTransformerWithConvolutionalAttention
+            model = m(
+                d_model=self.args.transformer_d_model,
+                input_features_count=self.args.transformer_input_features_count,
+                num_encoder_layers=self.args.transformer_num_encoder_layers,
+                num_decoder_layers=self.args.transformer_num_decoder_layers,
+                dim_feedforward=self.args.transformer_dim_feedforward,
+                dropout=self.args.transformer_dropout,
+                attention_heads=self.args.transformer_attention_heads)
             model_wrapper = PytorchTransformerModelWrapper(model, self.model_type, self.args)
 
         else:

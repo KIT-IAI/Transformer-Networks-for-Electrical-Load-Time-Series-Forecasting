@@ -12,7 +12,8 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--model', type=str, required=False, default='SimpleNeuralNet',
-                        choices=['LinearRegression', 'SimpleNeuralNet', 'TimeSeriesTransformer'],
+                        choices=['LinearRegression', 'SimpleNeuralNet', 'TimeSeriesTransformer',
+                                 'TimeSeriesTransformerWithConvolutionalAttention'],
                         help="Determines which model is executed.")
 
     # problem specification
