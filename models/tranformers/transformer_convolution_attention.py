@@ -47,10 +47,11 @@ class ConvolutionalMultiheadAttention(Module):
     bias_k: Optional[torch.Tensor]
     bias_v: Optional[torch.Tensor]
 
-    def __init__(self, embed_dim, num_heads, dropout=0., bias=True, add_bias_kv=False, add_zero_attn=False,
+    def __init__(self, embed_dim, num_heads, kernel_size=3, dropout=0., bias=True, add_bias_kv=False, add_zero_attn=False,
                  kdim=None, vdim=None, batch_first=False, device=None, dtype=None) -> None:
         factory_kwargs = {'device': device, 'dtype': dtype}
         super(ConvolutionalMultiheadAttention, self).__init__()
+        self.kernel_size = kernel_size
         self.embed_dim = embed_dim
         self.kdim = kdim if kdim is not None else embed_dim
         self.vdim = vdim if vdim is not None else embed_dim
@@ -89,7 +90,8 @@ class ConvolutionalMultiheadAttention(Module):
 
         self._reset_parameters()
 
-        self.conv = nn.Conv1d(in_channels=embed_dim, out_channels=embed_dim, kernel_size=(3,), stride=(1,))
+        self.conv = nn.Conv1d(in_channels=embed_dim, out_channels=embed_dim, kernel_size=(self.kernel_size,),
+                              stride=(1,))
 
     def _reset_parameters(self):
         if self._qkv_same_embed_dim:
@@ -158,8 +160,8 @@ class ConvolutionalMultiheadAttention(Module):
         """
         query = query.transpose(2, 1)
         key = key.transpose(2, 1)
-        query = self.conv.forward(F.pad(query, (2, 0)))  # convolutional part
-        key = self.conv.forward(F.pad(key, (2, 0)))
+        query = self.conv.forward(F.pad(query, (self.kernel_size - 1, 0)))  # convolutional part
+        key = self.conv.forward(F.pad(key, (self.kernel_size - 1, 0)))
         query = query.transpose(2, 0)
         key = key.transpose(2, 0)
         query = query.transpose(2, 1)

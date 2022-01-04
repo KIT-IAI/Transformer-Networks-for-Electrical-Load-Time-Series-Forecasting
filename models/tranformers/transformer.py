@@ -75,7 +75,7 @@ class TotalEmbedding(nn.Module):
         self.value_features = value_features
         self.time_features = time_features
 
-        self.value_embedding = ValueEmbedding(d_model, value_features)
+        self.value_embedding = ValueEmbedding(d_model, value_features + time_features)
         self.time_embedding = TimeEmbedding(d_model, time_features)
         self.positional_encoding = PositionalEncoding(d_model)
 
@@ -87,10 +87,10 @@ class TotalEmbedding(nn.Module):
         :param x: tensor of dimension [Batch_Size, Sequence_Length, Features]
         :return: the embedded value
         """
-        value_embedded = self.value_embedding(x[:, :, 0:self.value_features])
-        time_embedded = self.time_embedding(x[:, :, -self.time_features:])
+        value_embedded = self.value_embedding(x[:, :, :])
+        # time_embedded = self.time_embedding(x[:, :, -self.time_features:])
         pe = self.positional_encoding(x)
-        return self.dropout(value_embedded + time_embedded + pe)
+        return self.dropout(value_embedded + pe)
 
 
 class MultipleLinearLayers(nn.Module):

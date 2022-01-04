@@ -6,7 +6,7 @@ class ModelType(enum.Enum):
     SimpleNeuralNet = 'SimpleNeuralNet',
     TimeSeriesTransformer = 'TimeSeriesTransformer',
     TimeSeriesTransformerWithConvolutionalAttention = 'TimeSeriesTransformerWithConvolutionalAttention',
-
+    Informer = 'Informer',
 
     def __str__(self):
         return self.name

@@ -14,6 +14,7 @@ from evaluation.evaluator import Evaluator
 from experiments.experiment import Experiment
 from models.model_type import ModelType
 from models.simple_nn import SimpleNeuralNet
+from models.tranformers.informer import Informer, InformerStack
 from models.tranformers.transformer import TimeSeriesTransformer
 from models.tranformers.transformer_convolution_attention import TimeSeriesTransformerWithConvolutionalAttention
 from models.wrappers.base_model_wrapper import BaseModelWrapper
@@ -77,9 +78,9 @@ class Pipeline:
                 model = SimpleNeuralNet(train_dataset.get_number_of_input_features(),
                                         train_dataset.get_number_of_target_variables())
                 model_wrapper = PytorchNeuralNetModelWrapper(model, self.model_type, self.args)
-
         elif self.model_type == ModelType.TimeSeriesTransformer \
-                or self.model_type == ModelType.TimeSeriesTransformerWithConvolutionalAttention:
+                or self.model_type == ModelType.TimeSeriesTransformerWithConvolutionalAttention \
+                or self.model_type == ModelType.Informer:
             train_dataset = TransformerDataset(
                 train, UTC_TIMESTAMP, TARGET_VARIABLE, self.window_length,
                 self.forecasting_horizon, self.args.transformer_labels_count,
@@ -90,17 +91,32 @@ class Pipeline:
                 self.predict_single_value, self.include_time_context, scaler, False)
 
             if self.model_type == ModelType.TimeSeriesTransformer:
-                m = TimeSeriesTransformer
+                model = TimeSeriesTransformer(
+                    d_model=self.args.transformer_d_model,
+                    input_features_count=self.args.transformer_input_features_count,
+                    num_encoder_layers=self.args.transformer_num_encoder_layers,
+                    num_decoder_layers=self.args.transformer_num_decoder_layers,
+                    dim_feedforward=self.args.transformer_dim_feedforward,
+                    dropout=self.args.transformer_dropout,
+                    attention_heads=self.args.transformer_attention_heads)
+            elif self.model_type == ModelType.TimeSeriesTransformerWithConvolutionalAttention:
+                model = TimeSeriesTransformerWithConvolutionalAttention(
+                    d_model=self.args.transformer_d_model,
+                    input_features_count=self.args.transformer_input_features_count,
+                    num_encoder_layers=self.args.transformer_num_encoder_layers,
+                    num_decoder_layers=self.args.transformer_num_decoder_layers,
+                    dim_feedforward=self.args.transformer_dim_feedforward,
+                    dropout=self.args.transformer_dropout,
+                    attention_heads=self.args.transformer_attention_heads)
             else:
-                m = TimeSeriesTransformerWithConvolutionalAttention
-            model = m(
-                d_model=self.args.transformer_d_model,
-                input_features_count=self.args.transformer_input_features_count,
-                num_encoder_layers=self.args.transformer_num_encoder_layers,
-                num_decoder_layers=self.args.transformer_num_decoder_layers,
-                dim_feedforward=self.args.transformer_dim_feedforward,
-                dropout=self.args.transformer_dropout,
-                attention_heads=self.args.transformer_attention_heads)
+                model = Informer(enc_in=1, dec_in=1, c_out=1, seq_len=self.args.time_series_window,
+                                 d_model=self.args.transformer_d_model, d_ff=self.args.transformer_dim_feedforward,
+                                 e_layers=self.args.transformer_num_encoder_layers,
+                                 d_layers=self.args.transformer_num_decoder_layers,
+                                 n_heads=self.args.transformer_attention_heads,
+                                 dropout=self.args.transformer_dropout,
+                                 label_len=self.args.transformer_labels_count, out_len=self.args.forecasting_horizon)
+
             model_wrapper = PytorchTransformerModelWrapper(model, self.model_type, self.args)
 
         else:

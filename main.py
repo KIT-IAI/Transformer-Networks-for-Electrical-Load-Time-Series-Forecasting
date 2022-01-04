@@ -13,7 +13,7 @@ def parse_arguments():
 
     parser.add_argument('--model', type=str, required=False, default='SimpleNeuralNet',
                         choices=['LinearRegression', 'SimpleNeuralNet', 'TimeSeriesTransformer',
-                                 'TimeSeriesTransformerWithConvolutionalAttention'],
+                                 'TimeSeriesTransformerWithConvolutionalAttention', 'Informer'],
                         help="Determines which model is executed.")
 
     # problem specification
@@ -36,7 +36,7 @@ def parse_arguments():
     # early stopping
     parser.add_argument('--use_early_stopping', type=bool, required=False, default=True,
                         help="Indicates whether the training should stop if the loss does not decreases.")
-    parser.add_argument('--early_stopping_patience', type=bool, required=False, default=10,
+    parser.add_argument('--early_stopping_patience', type=bool, required=False, default=5,
                         help="The allowed number of epochs with no loss decrease.")
 
     # learning rate scheduling
@@ -45,7 +45,7 @@ def parse_arguments():
 
     # transformer setting
     parser.add_argument('--transformer_d_model', type=int, required=False, default=160)
-    parser.add_argument('--transformer_input_features_count', type=int, required=False, default=11)
+    parser.add_argument('--transformer_input_features_count', type=int, required=False, default=12)
     parser.add_argument('--transformer_num_encoder_layers', type=int, required=False, default=3)
     parser.add_argument('--transformer_num_decoder_layers', type=int, required=False, default=3)
     parser.add_argument('--transformer_dim_feedforward', type=int, required=False, default=160)

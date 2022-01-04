@@ -23,7 +23,7 @@ class PytorchTransformerModelWrapper(BaseModelWrapper, ABC):
         validation_dl = DataLoader(validation_dataset, batch_size=self.args.batch_size)
 
         criterion = L1Loss()
-        optimizer = torch.optim.Adam(self.model.parameters(), lr=self.args.learning_rate, betas=(0.9, 0.95),
+        optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.args.learning_rate, betas=(0.9, 0.95),
                                      eps=0.000_000_001)
         scheduler = StepLR(optimizer, self.args.learning_rate_scheduler_step, self.args.learning_rate_scheduler_gamma)
 
@@ -49,18 +49,25 @@ class PytorchTransformerModelWrapper(BaseModelWrapper, ABC):
                 target = torch.cat([target, expected], dim=0)
 
                 if self.args.transformer_use_teacher_forcing:
-                    start_decoder_input = decoder_input[:, :self.args.transformer_labels_count, :].to(device)
-                    for i in range(0, self.args.forecasting_horizon):
-                        predicted = self.model(encoder_input, start_decoder_input).to(device)
-                        known_decoder_input = decoder_input[:, self.args.transformer_labels_count + i - 1:
-                                                               self.args.transformer_labels_count + i, 1:].to(
-                            device)
+                    expected = decoder_input[:, self.args.transformer_labels_count:, 0].detach().clone().to(device)
+                    decoder_input[:, 1:, 0] = decoder_input[:, :-1, 0]  # shift one step the target to the right
+
+                    start_decoder_input = decoder_input[:, :self.args.transformer_labels_count + 1, :].to(device)
+                    for i in range(1, 25):
+                        target_mask = create_mask(start_decoder_input.shape[1]).to(device)
+                        predicted = self.model(encoder_input, start_decoder_input, tgt_mask=target_mask).to(device)
+                        if i == 24:
+                            known_decoder_input = torch.zeros(start_decoder_input.shape[0], 1, start_decoder_input.shape[2] - 1).to(device)
+                        else:
+                            known_decoder_input = decoder_input[:, self.args.transformer_labels_count + i:
+                                                                   self.args.transformer_labels_count + i + 1, 1:].to(
+                                device)
                         new_predicted = predicted[:,
-                                        self.args.transformer_labels_count + i - 1:self.args.transformer_labels_count + i,
+                                        self.args.transformer_labels_count + i -1:self.args.transformer_labels_count + i,
                                         0:1].to(device)
                         predicted = torch.cat([new_predicted, known_decoder_input], dim=2).to(device)
                         start_decoder_input = torch.cat([start_decoder_input[:, :, :], predicted], dim=1).to(device)
-                    predicted = start_decoder_input[:, self.args.transformer_labels_count:, 0].to(device)
+                    predicted = start_decoder_input[:, self.args.transformer_labels_count + 1:, 0].to(device)
 
                 elif self.args.transformer_use_auto_regression:
                     predicted = torch.zeros([batch_size, self.args.forecasting_horizon]).to(device)

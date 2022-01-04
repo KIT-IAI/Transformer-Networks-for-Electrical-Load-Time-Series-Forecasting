@@ -7,7 +7,7 @@ import pandas as pd
 import torch
 from sklearn.preprocessing import StandardScaler
 from torch.utils.data import Dataset
-from workalendar.europe import Germany
+from workalendar.europe import Germany, BadenWurttemberg
 
 from data_preparation.time_features import generate_cyclical_time_value, convert_datetime_to_hour_of_the_week
 
@@ -80,18 +80,27 @@ class TransformerDataset(Dataset, ABC):
             hour_of_the_week_context = generate_cyclical_time_value(convert_datetime_to_hour_of_the_week(time_stamp), 6)
             week_of_the_year_context = generate_cyclical_time_value(time_stamp.weekofyear, 53)
 
-            calendar = Germany()
+            calendar = BadenWurttemberg()
             is_workday_context = calendar.is_working_day(time_stamp)
             is_holiday_context = calendar.is_holiday(time_stamp)
             is_previous_day_workday_context = calendar.is_working_day(time_stamp - datetime.timedelta(days=1))
             is_next_day_workday_context = calendar.is_working_day(time_stamp + datetime.timedelta(days=1))
 
-            self.rows.append([
+            is_christmas_time = datetime.date.fromisoformat(str(time_stamp.year) + '-12-23') < time_stamp \
+                                < datetime.date.fromisoformat(str(time_stamp.year) + '-12-28')
+
+            row = [
                 load_data_value,
                 hour_of_the_week_context[0], hour_of_the_week_context[1],
                 hour_of_the_day_context[0], hour_of_the_day_context[1],
                 week_of_the_year_context[0], week_of_the_year_context[1],
-                is_workday_context, is_holiday_context, is_previous_day_workday_context, is_next_day_workday_context,
-            ])
+                is_christmas_time,
+                is_workday_context,
+                is_holiday_context,
+                is_previous_day_workday_context,
+                is_next_day_workday_context
+            ]
+            self.rows.append(row)
+
         self.rows = torch.tensor(np.array(self.rows, dtype=np.float32))
         self.time_labels = np.array(time_stamps[self._time_series_window_in_hours: -self._forecasting_horizon_in_hours])

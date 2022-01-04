@@ -7,7 +7,7 @@ import datetime
 import torch
 from sklearn.preprocessing import StandardScaler
 from torch.utils.data import Dataset
-from workalendar.europe import Germany
+from workalendar.europe import BadenWurttemberg
 
 from data_preparation.time_features import generate_cyclical_time_value, convert_datetime_to_hour_of_the_week
 
@@ -114,7 +114,7 @@ class StandardDataset(Dataset, ABC):
                 hour_of_the_week_context = generate_cyclical_time_value(
                     convert_datetime_to_hour_of_the_week(prediction_datetime), WEEK_IN_DAYS)
 
-                calendar = Germany()
+                calendar = BadenWurttemberg()
                 if self._is_single_time_point_prediction:
                     is_workday_context = [calendar.is_working_day(prediction_datetime)]
                     is_holiday_context = [calendar.is_holiday(prediction_datetime)]
