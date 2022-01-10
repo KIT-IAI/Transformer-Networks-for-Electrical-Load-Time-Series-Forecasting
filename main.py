@@ -17,7 +17,7 @@ def parse_arguments():
                         help="Determines which model is executed.")
 
     # problem specification
-    parser.add_argument('--forecasting_horizon', type=int, required=False, default=24,
+    parser.add_argument('--forecasting_horizon', type=int, required=False, default=96,
                         help="How far the prediction reaches.")
     parser.add_argument('--predict_single_value', type=bool, required=False, default=False,
                         help="Indicates whether a single value is the target.")
@@ -27,7 +27,7 @@ def parse_arguments():
     # general learning settings
     parser.add_argument('--include_time_context', type=bool, required=False, default=True,
                         help="Indicates whether the time information is used as additional input.")
-    parser.add_argument('--learning_rate', type=float, required=False, default=0.0001,
+    parser.add_argument('--learning_rate', type=float, required=False, default=0.0005,
                         help="The learning rate for PyTorch model-training.")
     parser.add_argument('--batch_size', type=int, required=False, default=32)
     parser.add_argument('--max_epochs', type=int, required=False, default=200,
@@ -40,7 +40,7 @@ def parse_arguments():
                         help="The allowed number of epochs with no loss decrease.")
 
     # learning rate scheduling
-    parser.add_argument('--learning_rate_scheduler_step', type=int, required=False, default=8)
+    parser.add_argument('--learning_rate_scheduler_step', type=int, required=False, default=2)
     parser.add_argument('--learning_rate_scheduler_gamma', type=float, required=False, default=0.1)
 
     # transformer setting

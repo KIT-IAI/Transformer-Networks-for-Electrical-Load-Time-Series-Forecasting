@@ -29,6 +29,7 @@ class Experiment:
             .replace(':', '_') \
             .replace('.', '_')
         experiment_name = str(self.model_wrapper.model_type) + date
+        print(experiment_name)
 
         if self.training_report:
             serialized_training_report = self.training_report.serialize()

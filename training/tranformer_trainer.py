@@ -50,7 +50,8 @@ class TransformerTrainer(Trainer, ABC):
 
             elif self.args.transformer_use_auto_regression:
                 predicted, expected = self.execute_model_one_step_ahead(encoder_input, decoder_input, device)
-
+                predicted = predicted[:, self.args.transformer_labels_count:]
+                expected = expected[:, self.args.transformer_labels_count:]
             else:  # generative approach (currently the best)
                 predicted, expected = self.execute_model_on_batch(encoder_input, decoder_input, device)
             training_loss = self.loss_criterion(predicted, expected)

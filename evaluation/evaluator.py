@@ -36,7 +36,14 @@ class Evaluation:
         self.expected_predicted_comparison = expected_predicted_comparison
 
     def __str__(self):
-        return str(self.__dict__)
+        return str(
+            {
+                'total_mape_loss': self.total_mape_loss,
+                'total_mase_loss': self.total_mase_loss,
+                'mape_losses_by_prediction_variable': self.mape_losses_by_prediction_variable,
+                'mase_losses_by_prediction_variable': self.mase_losses_by_prediction_variable,
+            }
+        )
 
     def serialize(self):
         return {

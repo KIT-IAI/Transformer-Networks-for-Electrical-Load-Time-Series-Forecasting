@@ -109,13 +109,14 @@ class Pipeline:
                     dropout=self.args.transformer_dropout,
                     attention_heads=self.args.transformer_attention_heads)
             else:
-                model = Informer(enc_in=1, dec_in=1, c_out=1, seq_len=self.args.time_series_window,
-                                 d_model=self.args.transformer_d_model, d_ff=self.args.transformer_dim_feedforward,
-                                 e_layers=self.args.transformer_num_encoder_layers,
+                model = InformerStack(input_features_count=self.args.transformer_input_features_count,
+                                 d_model=self.args.transformer_d_model,
+                                 d_ff=self.args.transformer_dim_feedforward,
+                                 e_layers=[3, 2, 1],
                                  d_layers=self.args.transformer_num_decoder_layers,
                                  n_heads=self.args.transformer_attention_heads,
                                  dropout=self.args.transformer_dropout,
-                                 label_len=self.args.transformer_labels_count, out_len=self.args.forecasting_horizon)
+                                 attn='full')
 
             model_wrapper = PytorchTransformerModelWrapper(model, self.model_type, self.args)
 
