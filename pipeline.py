@@ -109,10 +109,10 @@ class Pipeline:
                     dropout=self.args.transformer_dropout,
                     attention_heads=self.args.transformer_attention_heads)
             else:
-                model = InformerStack(input_features_count=self.args.transformer_input_features_count,
+                model = Informer(input_features_count=self.args.transformer_input_features_count,
                                  d_model=self.args.transformer_d_model,
                                  d_ff=self.args.transformer_dim_feedforward,
-                                 e_layers=[3, 2, 1],
+                                 e_layers=self.args.transformer_num_encoder_layers,
                                  d_layers=self.args.transformer_num_decoder_layers,
                                  n_heads=self.args.transformer_attention_heads,
                                  dropout=self.args.transformer_dropout,
