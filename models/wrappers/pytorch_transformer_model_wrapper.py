@@ -23,7 +23,7 @@ class PytorchTransformerModelWrapper(BaseModelWrapper, ABC):
         validation_dl = DataLoader(validation_dataset, batch_size=self.args.batch_size)
 
         criterion = L1Loss()
-        optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.args.learning_rate, betas=(0.9, 0.95),
+        optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.args.learning_rate,
                                      eps=0.000_000_001)
         scheduler = StepLR(optimizer, self.args.learning_rate_scheduler_step, self.args.learning_rate_scheduler_gamma)
 
@@ -81,31 +81,31 @@ class PytorchTransformerModelWrapper(BaseModelWrapper, ABC):
 
                     accumulated_decoder_input \
                         = torch.zeros([batch_size,
-                                       self.args.transformer_labels_count + self.args.forecasting_horizon,
+                                       self.args.transformer_labels_count + self.args.forecasting_horizon - 1,
                                        self.args.transformer_input_features_count]).to(device)
                     accumulated_decoder_input[:, :self.args.transformer_labels_count, :] \
                         = decoder_input[:, :self.args.transformer_labels_count, :]
-                    accumulated_decoder_input[:, self.args.transformer_labels_count:, 1:] \
-                        = decoder_input[:, self.args.transformer_labels_count:, 1:]
+                    accumulated_decoder_input[:, :, 1:] \
+                        = decoder_input[:, 1:, 1:]
 
                     accumulated_decoder_input = accumulated_decoder_input.to(device)
                     accumulated_encoder_input = accumulated_encoder_input.to(device)
 
                     for i in range(0, self.args.forecasting_horizon):
-                        target_mask = create_mask(self.args.transformer_labels_count + 1).to(device)
+                        target_mask = create_mask(self.args.transformer_labels_count).to(device)
                         new_prediction = torch.reshape(
                             self.model(accumulated_encoder_input[:, i:i + self.args.time_series_window],
-                                       accumulated_decoder_input[:, i:i + self.args.transformer_labels_count + 1],
+                                       accumulated_decoder_input[:, i:i + self.args.transformer_labels_count],
                                        tgt_mask=target_mask),
-                            torch.Size([batch_size, self.args.transformer_labels_count + 1]))
-                        predicted[:, i:i + 1] = new_prediction[:, self.args.transformer_labels_count:]
+                            torch.Size([batch_size, self.args.transformer_labels_count]))
+                        predicted[:, i:i + 1] = new_prediction[:, self.args.transformer_labels_count - 1:]
                         accumulated_decoder_input[:, self.args.transformer_labels_count + i:
                                                      self.args.transformer_labels_count + i + 1, 0:1] \
-                            = torch.reshape(new_prediction[:, self.args.transformer_labels_count:],
+                            = torch.reshape(new_prediction[:, self.args.transformer_labels_count - 1:],
                                             shape=torch.Size([batch_size, 1, 1]))
                         accumulated_encoder_input[:, self.args.time_series_window + i:
                                                      self.args.time_series_window + i + 1, 0:1] \
-                            = torch.reshape(new_prediction[:, self.args.transformer_labels_count:],
+                            = torch.reshape(new_prediction[:, self.args.transformer_labels_count - 1:],
                                             shape=torch.Size([batch_size, 1, 1]))
 
                 else:  # generative approach (currently the preferred way)

@@ -1,3 +1,4 @@
+import copy
 from abc import ABC, abstractmethod
 from typing import List
 
@@ -74,6 +75,7 @@ class Trainer(ABC):
         self.epochs_count = epochs_count
         self.learning_rate_scheduler = learning_rate_scheduler
         self.args = args
+        self.best_model_state = {}
 
     def train(self) -> TrainingReport:
         """
@@ -102,6 +104,7 @@ class Trainer(ABC):
                 else:
                     epochs_without_validation_loss_decrease = 0
                     minimum_average_validation_loss = validation_loss
+                    self.best_model_state = copy.deepcopy(self.model.state_dict())
 
                 if epochs_without_validation_loss_decrease > self.args.early_stopping_patience:
                     print('Early stopping has happened at epoch', epoch)
@@ -114,6 +117,7 @@ class Trainer(ABC):
             epochs.append(TrainingEpoch(epoch, training_loss, validation_loss))
 
         device = 'cpu'
+        self.model.load_state_dict(self.best_model_state)
         self.model = self.model.to(device)
 
         return TrainingReport(epochs)

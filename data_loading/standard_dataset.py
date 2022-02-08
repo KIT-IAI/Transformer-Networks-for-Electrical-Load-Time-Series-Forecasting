@@ -104,12 +104,14 @@ class StandardDataset(Dataset, ABC):
             # prepare the input
             hour_of_the_day_context = []
             hour_of_the_week_context = []
+            week_of_the_year_context = []
+
             is_workday_context = []
             is_holiday_context = []
             is_previous_day_workday_context = []
             is_next_day_workday_context = []
             if self._include_time_information:
-                prediction_datetime = time_stamps[index + self._forecasting_horizon_in_hours]
+                prediction_datetime = time_stamps[index]
                 hour_of_the_day_context = generate_cyclical_time_value(prediction_datetime.hour, DAY_IN_HOURS)
                 hour_of_the_week_context = generate_cyclical_time_value(
                     convert_datetime_to_hour_of_the_week(prediction_datetime), WEEK_IN_DAYS)
@@ -132,7 +134,10 @@ class StandardDataset(Dataset, ABC):
                                                    for date_time in predictions_datetime]
 
             previous_time_series_value: np.array = time_series[index - self._time_series_window_in_hours:index]
-            input_row = np.concatenate((previous_time_series_value, hour_of_the_day_context, hour_of_the_week_context,
+            input_row = np.concatenate((previous_time_series_value,
+                                        hour_of_the_day_context,
+                                        hour_of_the_week_context,
+                                        week_of_the_year_context,
                                         is_workday_context, is_holiday_context, is_previous_day_workday_context,
                                         is_next_day_workday_context))
             input_rows.append(input_row)

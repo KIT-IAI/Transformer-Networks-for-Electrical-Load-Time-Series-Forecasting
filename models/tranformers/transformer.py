@@ -57,14 +57,14 @@ class PositionalEncoding(nn.Module):
         position = torch.arange(max_len).unsqueeze(1)
         div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
 
-        pe = torch.zeros(max_len, 1, d_model)
+        pe = torch.zeros(1, max_len, d_model)
         pe.require_grad = False
-        pe[:, 0, 0::2] = torch.sin(position * div_term)
-        pe[:, 0, 1::2] = torch.cos(position * div_term)
+        pe[0, :, 0::2] = torch.sin(position * div_term)
+        pe[0, :, 1::2] = torch.cos(position * div_term)
         self.register_buffer('pe', pe)
 
     def forward(self, x: Tensor) -> Tensor:
-        return self.pe[:x.size(0)]
+        return self.pe[:, :x.size(1), :]
 
 
 class TotalEmbedding(nn.Module):
@@ -79,8 +79,9 @@ class TotalEmbedding(nn.Module):
         self.time_embedding = TimeEmbedding(d_model, time_features)
         self.positional_encoding = PositionalEncoding(d_model)
 
-        self.linear_embedding_weight = nn.Linear(3, 1)
+        self.linear_embedding_weight = nn.Linear(2, 1, bias=False)
         self.dropout = nn.Dropout(p=dropout)
+        self.linear_embedding_weight.weight.data.fill_(1)
 
     def forward(self, x: Tensor):
         """
@@ -88,9 +89,13 @@ class TotalEmbedding(nn.Module):
         :return: the embedded value
         """
         value_embedded = self.value_embedding(x[:, :, :])
+        # pe = self.positional_encoding(x)
+        # return self.dropout(value_embedded + pe)
+
         # time_embedded = self.time_embedding(x[:, :, -self.time_features:])
-        pe = self.positional_encoding(x)
-        return self.dropout(value_embedded + pe)
+        pe = self.positional_encoding(x).repeat(x.shape[0], 1, 1)
+        return self.dropout(self.linear_embedding_weight.weight[0][0] * value_embedded
+                            + self.linear_embedding_weight.weight[0][1] * pe)
 
 
 class MultipleLinearLayers(nn.Module):

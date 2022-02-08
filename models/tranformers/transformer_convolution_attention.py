@@ -8,7 +8,7 @@ from torch.nn.init import xavier_uniform_, constant_, xavier_normal_
 from torch.nn.modules.linear import NonDynamicallyQuantizableLinear
 from torch.nn.modules.transformer import _get_activation_fn, TransformerDecoder
 
-from models.tranformers.transformer import TotalEmbedding
+from models.tranformers.transformer import TotalEmbedding, MultipleLinearLayers
 
 
 class ConvolutionalMultiheadAttention(Module):
@@ -92,6 +92,8 @@ class ConvolutionalMultiheadAttention(Module):
 
         self.conv = nn.Conv1d(in_channels=embed_dim, out_channels=embed_dim, kernel_size=(self.kernel_size,),
                               stride=(1,))
+        self.conv2 = nn.Conv1d(in_channels=embed_dim, out_channels=embed_dim, kernel_size=(self.kernel_size,),
+                              stride=(1,))
 
     def _reset_parameters(self):
         if self._qkv_same_embed_dim:
@@ -161,7 +163,7 @@ class ConvolutionalMultiheadAttention(Module):
         query = query.transpose(2, 1)
         key = key.transpose(2, 1)
         query = self.conv.forward(F.pad(query, (self.kernel_size - 1, 0)))  # convolutional part
-        key = self.conv.forward(F.pad(key, (self.kernel_size - 1, 0)))
+        key = self.conv2.forward(F.pad(key, (self.kernel_size - 1, 0)))
         query = query.transpose(2, 0)
         key = key.transpose(2, 0)
         query = query.transpose(2, 1)

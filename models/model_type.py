@@ -10,3 +10,8 @@ class ModelType(enum.Enum):
 
     def __str__(self):
         return self.name
+
+    def is_transformer_model(self) -> bool:
+        return self == ModelType.TimeSeriesTransformer \
+               or self == ModelType.TimeSeriesTransformerWithConvolutionalAttention \
+               or self == ModelType.Informer

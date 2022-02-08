@@ -44,7 +44,7 @@ class Experiment:
             'evaluation': self.evaluation.serialize()
         }
 
-        file_path = os.path.join('experiments', 'archive', experiment_name + JSON_FILE_ENDING)
+        file_path = os.path.join('experiments', 'final', experiment_name + JSON_FILE_ENDING)
 
         with open(file_path, 'w') as fp:
             json.dump(result, fp)

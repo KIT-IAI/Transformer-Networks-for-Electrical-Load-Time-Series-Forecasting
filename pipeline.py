@@ -1,3 +1,4 @@
+import argparse
 import datetime
 import os
 from pathlib import Path
@@ -14,7 +15,7 @@ from evaluation.evaluator import Evaluator
 from experiments.experiment import Experiment
 from models.model_type import ModelType
 from models.simple_nn import SimpleNeuralNet
-from models.tranformers.informer import Informer, InformerStack
+from models.tranformers.informer import Informer
 from models.tranformers.transformer import TimeSeriesTransformer
 from models.tranformers.transformer_convolution_attention import TimeSeriesTransformerWithConvolutionalAttention
 from models.wrappers.base_model_wrapper import BaseModelWrapper
@@ -22,14 +23,18 @@ from models.wrappers.pytorch_neural_net_model_wrapper import PytorchNeuralNetMod
 from models.wrappers.pytorch_transformer_model_wrapper import PytorchTransformerModelWrapper
 from models.wrappers.sklearn_model_wrapper import SklearnModelWrapper
 
+# dataset related constants
 UTC_TIMESTAMP = 'utc_timestamp'
 TARGET_VARIABLE = 'DE_transnetbw_load_actual_entsoe_transparency'
 PATH_TO_CSV = os.path.join('data', 'opsd', 'time_series_15min_singleindex.csv')
 
 
 class Pipeline:
+    """
+    The Pipeline is the starting point for the training, validation and testing of the models.
+    """
 
-    def __init__(self, model_type: ModelType, args):
+    def __init__(self, model_type: ModelType, args: argparse.Namespace):
         """
         Creates a pipeline.
 
@@ -50,7 +55,11 @@ class Pipeline:
     def start(self) -> None:
         """
         Starts the pipeline calculations.
+        First, the dataset is loaded, split into train, validation and test set, and preprocessed. Afterward, the models
+        are trained depending on their underlying architecture. Last, the model is evaluated.
         """
+
+        # Load the data and it split into subsets
         dfl = TimeSeriesDataframeLoader(Path(PATH_TO_CSV), UTC_TIMESTAMP, TARGET_VARIABLE)
         train, validation, test = dfl.get_train_validation_test_datasets(
             TimeInterval(datetime.date(2015, 1, 2), datetime.date(2017, 12, 31)),
@@ -58,11 +67,14 @@ class Pipeline:
             TimeInterval(datetime.date(2019, 1, 1), datetime.date(2019, 12, 31)))
 
         scaler = StandardScaler()
-
         model_wrapper: BaseModelWrapper
         train_dataset: Dataset
         validation_dataset: Dataset
+        test_dataset: Dataset
+
+        # differentiate between the different architecture types (Transformers need other data format)
         if self.model_type == ModelType.LinearRegression or self.model_type == ModelType.SimpleNeuralNet:
+            # convert the the raw data into the preprocessed datasets
             train_dataset: StandardDataset = StandardDataset(train, UTC_TIMESTAMP, TARGET_VARIABLE, self.window_length,
                                                              self.forecasting_horizon, self.predict_single_value,
                                                              self.include_time_context, scaler, True)
@@ -70,14 +82,20 @@ class Pipeline:
                                                                   self.window_length, self.forecasting_horizon,
                                                                   self.predict_single_value, self.include_time_context,
                                                                   scaler, False)
+            test_dataset: StandardDataset = StandardDataset(test, UTC_TIMESTAMP, TARGET_VARIABLE,
+                                                            self.window_length, self.forecasting_horizon,
+                                                            self.predict_single_value, self.include_time_context,
+                                                            scaler, False)
+
+            # differentiate between Linear Regression and Neural Net, because they are trained with different libraries
             if self.model_type == ModelType.LinearRegression:
                 linear_regression = LinearRegression()
                 model_wrapper = SklearnModelWrapper(linear_regression, self.model_type, self.args)
-
             else:
                 model = SimpleNeuralNet(train_dataset.get_number_of_input_features(),
                                         train_dataset.get_number_of_target_variables())
                 model_wrapper = PytorchNeuralNetModelWrapper(model, self.model_type, self.args)
+
         elif self.model_type == ModelType.TimeSeriesTransformer \
                 or self.model_type == ModelType.TimeSeriesTransformerWithConvolutionalAttention \
                 or self.model_type == ModelType.Informer:
@@ -87,6 +105,10 @@ class Pipeline:
                 self.predict_single_value, self.include_time_context, scaler, True)
             validation_dataset = TransformerDataset(
                 validation, UTC_TIMESTAMP, TARGET_VARIABLE, self.window_length,
+                self.forecasting_horizon, self.args.transformer_labels_count,
+                self.predict_single_value, self.include_time_context, scaler, False)
+            test_dataset = TransformerDataset(
+                test, UTC_TIMESTAMP, TARGET_VARIABLE, self.window_length,
                 self.forecasting_horizon, self.args.transformer_labels_count,
                 self.predict_single_value, self.include_time_context, scaler, False)
 
@@ -126,10 +148,10 @@ class Pipeline:
             raise Exception('Received a model, which is not included.')
 
         training_report = model_wrapper.train(train_dataset, validation_dataset)
-        validation_outputs, validation_targets = model_wrapper.predict(validation_dataset)
+        test_outputs, test_targets = model_wrapper.predict(test_dataset)
 
-        time_labels: np.ndarray = validation_dataset.time_labels
-        evaluator = Evaluator(validation_outputs, validation_targets, time_labels, scaler, self.forecasting_horizon)
+        time_labels: np.ndarray = test_dataset.time_labels
+        evaluator = Evaluator(test_outputs, test_targets, time_labels, scaler, self.forecasting_horizon)
         evaluation = evaluator.evaluate()
 
         self.experiment = Experiment(model_wrapper, evaluation, self.args, training_report)

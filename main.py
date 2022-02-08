@@ -1,9 +1,11 @@
 import argparse
 
+import torch
+
 from pipeline import Pipeline, ModelType
 
 
-def parse_arguments():
+def parse_arguments() -> argparse.Namespace:
     """
     Parses the arguments, which are needed for the pipeline initialization.
 
@@ -17,7 +19,7 @@ def parse_arguments():
                         help="Determines which model is executed.")
 
     # problem specification
-    parser.add_argument('--forecasting_horizon', type=int, required=False, default=96,
+    parser.add_argument('--forecasting_horizon', type=int, required=False, default=24,
                         help="How far the prediction reaches.")
     parser.add_argument('--predict_single_value', type=bool, required=False, default=False,
                         help="Indicates whether a single value is the target.")
@@ -55,11 +57,25 @@ def parse_arguments():
     parser.add_argument('--transformer_use_teacher_forcing', type=bool, required=False, default=False)
     parser.add_argument('--transformer_use_auto_regression', type=bool, required=False, default=False)
 
+    # other
+    parser.add_argument('--seed', type=int, required=False, default=0)
     return parser.parse_args()
 
 
-def main():
+def set_seed(seed) -> None:
+    """
+    Sets the random seed for pytorch.
+    """
+    torch.manual_seed(seed)
+
+
+def main() -> None:
+    """
+    Starts the program by parsing the arguments and initializing the pipeline.
+    The result of the pipeline is saved.
+    """
     arguments = parse_arguments()
+    set_seed(arguments.seed)
     pipeline = Pipeline(ModelType[arguments.model], arguments)
     pipeline.start()
     pipeline.save_to_file()

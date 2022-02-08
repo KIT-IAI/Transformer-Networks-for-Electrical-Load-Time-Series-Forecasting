@@ -19,8 +19,8 @@ class PytorchNeuralNetModelWrapper(BaseModelWrapper, ABC):
         self.model = model
 
     def train(self, train_dataset: StandardDataset, validation_dataset: StandardDataset = None) -> TrainingReport:
-        train_dl = DataLoader(train_dataset, batch_size=80, sampler=SequentialSampler(train_dataset))
-        validation_dl = DataLoader(validation_dataset, batch_size=80, sampler=SequentialSampler(validation_dataset))
+        train_dl = DataLoader(train_dataset, batch_size=self.args.batch_size, shuffle=True)
+        validation_dl = DataLoader(validation_dataset, batch_size=self.args.batch_size)
 
         criterion = L1Loss()
         optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.args.learning_rate)
