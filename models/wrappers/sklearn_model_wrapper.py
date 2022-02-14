@@ -1,3 +1,4 @@
+import argparse
 from abc import ABC
 
 import torch
@@ -8,8 +9,11 @@ from models.wrappers.base_model_wrapper import BaseModelWrapper
 
 
 class SklearnModelWrapper(BaseModelWrapper, ABC):
+    """
+    Is a wrapper for sklearn models to train them and predict.
+    """
 
-    def __init__(self, model, model_type: ModelType, args):
+    def __init__(self, model, model_type: ModelType, args: argparse.Namespace):
         super().__init__(model_type, args)
         self.model = model
 

@@ -3,7 +3,7 @@ from torch import nn
 
 class SimpleNeuralNet(nn.Module):
     """
-    Provides a neural-net with 4 layers.
+    Provides a neural-net with 2 layers.
     """
 
     def __init__(self, number_of_input_features: int, number_of_target_variables: int):

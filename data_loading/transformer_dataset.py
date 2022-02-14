@@ -7,14 +7,17 @@ import pandas as pd
 import torch
 from sklearn.preprocessing import StandardScaler
 from torch.utils.data import Dataset
-from workalendar.europe import Germany, BadenWurttemberg
+from workalendar.europe import BadenWurttemberg
 
-from data_preparation.time_features import generate_cyclical_time_value, convert_datetime_to_hour_of_the_week
+from data_loading.time_features import generate_cyclical_time_value, convert_datetime_to_hour_of_the_week
 
 
 class TransformerDataset(Dataset, ABC):
     """
-    The Dataset which is used
+    The TransformerDataset provides the functionality to prepare the data and load data point by index. It is intended
+    to be used for Transformers.
+    The prepared dataset consists of n data points, which consist itself of the time series value and m additional
+    features.
     """
 
     def __init__(self, df: pd.DataFrame, time_variable: str, target_variable: str, time_series_window_in_hours: int,
@@ -85,7 +88,6 @@ class TransformerDataset(Dataset, ABC):
             is_holiday_context = calendar.is_holiday(time_stamp)
             is_previous_day_workday_context = calendar.is_working_day(time_stamp - datetime.timedelta(days=1))
             is_next_day_workday_context = calendar.is_working_day(time_stamp + datetime.timedelta(days=1))
-
             is_christmas_time = datetime.date.fromisoformat(str(time_stamp.year) + '-12-23') < time_stamp \
                                 < datetime.date.fromisoformat(str(time_stamp.year) + '-12-28')
 

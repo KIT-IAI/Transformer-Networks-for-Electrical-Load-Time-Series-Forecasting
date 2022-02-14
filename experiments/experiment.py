@@ -1,3 +1,4 @@
+import argparse
 import datetime
 import json
 import os
@@ -5,17 +6,18 @@ import os
 from evaluation.evaluator import Evaluation
 from models.wrappers.base_model_wrapper import BaseModelWrapper
 from training.trainer import TrainingReport
-from training.training_config import TrainingConfig
 
 JSON_FILE_ENDING = '.json'
+EXPERIMENTS_DIRECTORY = 'experiments'
+FINAL_EXPERIMENTS_DIRECTORY = 'final'
 
 
 class Experiment:
     """
-    Collects all important information needed for reproducing results of trained model.
+    Collects all important information needed for reproducing and analysing results of trained model.
     """
 
-    def __init__(self, model_wrapper: BaseModelWrapper, evaluation: Evaluation, training_config: TrainingConfig,
+    def __init__(self, model_wrapper: BaseModelWrapper, evaluation: Evaluation, training_config: argparse.Namespace,
                  training_report: TrainingReport):
         self.model_wrapper = model_wrapper
         self.evaluation = evaluation
@@ -23,6 +25,12 @@ class Experiment:
         self.training_report = training_report
 
     def save_to_json_file(self) -> None:
+        """
+        Saves the experiment data to a json file. The name of the file is specified by the executed model and the time
+        of execution.
+        The data is serialized before storing.
+        """
+
         date = str(datetime.datetime.now()) \
             .replace(' ', '_') \
             .replace('-', '_') \
@@ -31,10 +39,7 @@ class Experiment:
         experiment_name = str(self.model_wrapper.model_type) + date
         print(experiment_name)
 
-        if self.training_report:
-            serialized_training_report = self.training_report.serialize()
-        else:
-            serialized_training_report = None
+        serialized_training_report = self.training_report.serialize() if self.training_report else None
         result = {
             'experimentName': experiment_name,
             'modelType': str(self.model_wrapper.model_type),
@@ -44,7 +49,7 @@ class Experiment:
             'evaluation': self.evaluation.serialize()
         }
 
-        file_path = os.path.join('experiments', 'final', experiment_name + JSON_FILE_ENDING)
+        file_path = os.path.join(EXPERIMENTS_DIRECTORY, FINAL_EXPERIMENTS_DIRECTORY, experiment_name + JSON_FILE_ENDING)
 
         with open(file_path, 'w') as fp:
             json.dump(result, fp)

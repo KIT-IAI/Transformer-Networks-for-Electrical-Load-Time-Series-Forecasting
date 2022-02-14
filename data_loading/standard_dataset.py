@@ -9,7 +9,7 @@ from sklearn.preprocessing import StandardScaler
 from torch.utils.data import Dataset
 from workalendar.europe import BadenWurttemberg
 
-from data_preparation.time_features import generate_cyclical_time_value, convert_datetime_to_hour_of_the_week
+from data_loading.time_features import generate_cyclical_time_value, convert_datetime_to_hour_of_the_week
 
 DAY_IN_HOURS = 24
 WEEK_IN_DAYS = 7
@@ -17,7 +17,12 @@ WEEK_IN_DAYS = 7
 
 class StandardDataset(Dataset, ABC):
     """
-    The Dataset which is used
+    The StandardDataset provides the functionality to prepare the data and load data point by index. It is intended to
+    be used for ML models like linear regression or neural nets.
+    The prepared dataset consists of
+        - the time series target (dimension: [data points, target sequence length]),
+        - time series input (dimension: [data points, input sequence length]),
+        - and corresponding time-labels, which indicate the datetime of the forecast. (dimension: [data points]
     """
 
     def __init__(self, df: pd.DataFrame, time_variable: str, target_variable: str, time_series_window_in_hours: int,
@@ -76,7 +81,7 @@ class StandardDataset(Dataset, ABC):
         Prepares the time-series data.
         """
         # extract the unprocessed time series
-        load_data = np.array(self._df[self._target_variable][::4])  # use hourly resolution
+        load_data = np.array(self._df[self._target_variable][::4])  # use hourly resolution --> every fourth value
         time_stamps = np.array(self._df[self._time_variable][::4])
 
         # scale the values
@@ -91,7 +96,6 @@ class StandardDataset(Dataset, ABC):
 
         # create the input and target
         time_series = np.array(scaled_load_data, dtype=np.float32)
-        time_series[0] = 0
         target_rows = []
         input_rows = []
         for index in range(self._time_series_window_in_hours, len(time_series) - self._forecasting_horizon_in_hours):

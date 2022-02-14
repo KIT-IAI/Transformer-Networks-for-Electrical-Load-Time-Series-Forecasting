@@ -13,6 +13,9 @@ from training.tranformer_trainer import TransformerTrainer, create_mask
 
 
 class PytorchTransformerModelWrapper(BaseModelWrapper, ABC):
+    """
+    Is a wrapper for pytorch transformer models to train them and predict.
+    """
 
     def __init__(self, model: torch.nn.Module, model_type: ModelType, args):
         super().__init__(model_type, args)
@@ -23,8 +26,7 @@ class PytorchTransformerModelWrapper(BaseModelWrapper, ABC):
         validation_dl = DataLoader(validation_dataset, batch_size=self.args.batch_size)
 
         criterion = L1Loss()
-        optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.args.learning_rate,
-                                     eps=0.000_000_001)
+        optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.args.learning_rate, eps=0.000_000_001)
         scheduler = StepLR(optimizer, self.args.learning_rate_scheduler_step, self.args.learning_rate_scheduler_gamma)
 
         trainer = TransformerTrainer(train_dl, validation_dl, self.model, criterion, optimizer, self.args.max_epochs,

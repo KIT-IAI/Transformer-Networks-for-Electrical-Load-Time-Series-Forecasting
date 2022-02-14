@@ -117,7 +117,7 @@ class Trainer(ABC):
             epochs.append(TrainingEpoch(epoch, training_loss, validation_loss))
 
         device = 'cpu'
-        self.model.load_state_dict(self.best_model_state)
+        self.model.load_state_dict(self.best_model_state)  # use the best model
         self.model = self.model.to(device)
 
         return TrainingReport(epochs)

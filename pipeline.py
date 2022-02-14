@@ -73,7 +73,7 @@ class Pipeline:
         test_dataset: Dataset
 
         # differentiate between the different architecture types (Transformers need other data format)
-        if self.model_type == ModelType.LinearRegression or self.model_type == ModelType.SimpleNeuralNet:
+        if not self.model_type.is_transformer_model():
             # convert the the raw data into the preprocessed datasets
             train_dataset: StandardDataset = StandardDataset(train, UTC_TIMESTAMP, TARGET_VARIABLE, self.window_length,
                                                              self.forecasting_horizon, self.predict_single_value,
@@ -96,9 +96,8 @@ class Pipeline:
                                         train_dataset.get_number_of_target_variables())
                 model_wrapper = PytorchNeuralNetModelWrapper(model, self.model_type, self.args)
 
-        elif self.model_type == ModelType.TimeSeriesTransformer \
-                or self.model_type == ModelType.TimeSeriesTransformerWithConvolutionalAttention \
-                or self.model_type == ModelType.Informer:
+        else:  # Transformer models
+            # convert the the raw data into the preprocessed datasets
             train_dataset = TransformerDataset(
                 train, UTC_TIMESTAMP, TARGET_VARIABLE, self.window_length,
                 self.forecasting_horizon, self.args.transformer_labels_count,
@@ -112,6 +111,7 @@ class Pipeline:
                 self.forecasting_horizon, self.args.transformer_labels_count,
                 self.predict_single_value, self.include_time_context, scaler, False)
 
+            # differentiate between the three available transformer models
             if self.model_type == ModelType.TimeSeriesTransformer:
                 model = TimeSeriesTransformer(
                     d_model=self.args.transformer_d_model,
@@ -142,14 +142,11 @@ class Pipeline:
 
             model_wrapper = PytorchTransformerModelWrapper(model, self.model_type, self.args)
 
-        else:
-            print(self.model_type)
-            print(type(self.model_type))
-            raise Exception('Received a model, which is not included.')
-
+        # train the model
         training_report = model_wrapper.train(train_dataset, validation_dataset)
-        test_outputs, test_targets = model_wrapper.predict(test_dataset)
 
+        # evaluate the model on the test data
+        test_outputs, test_targets = model_wrapper.predict(test_dataset)
         time_labels: np.ndarray = test_dataset.time_labels
         evaluator = Evaluator(test_outputs, test_targets, time_labels, scaler, self.forecasting_horizon)
         evaluation = evaluator.evaluate()
@@ -158,4 +155,7 @@ class Pipeline:
         print(str(self.experiment))
 
     def save_to_file(self):
+        """
+        Saves the completed experiment (pipeline has been run once) to a file.
+        """
         self.experiment.save_to_json_file()
