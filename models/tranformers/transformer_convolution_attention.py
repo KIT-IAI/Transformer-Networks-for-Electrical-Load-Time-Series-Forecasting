@@ -8,7 +8,7 @@ from torch.nn.init import xavier_uniform_, constant_, xavier_normal_
 from torch.nn.modules.linear import NonDynamicallyQuantizableLinear
 from torch.nn.modules.transformer import _get_activation_fn, TransformerDecoder
 
-from models.tranformers.transformer import TotalEmbedding, MultipleLinearLayers
+from models.tranformers.transformer import TotalEmbedding
 
 
 class ConvolutionalMultiheadAttention(Module):
@@ -38,16 +38,13 @@ class ConvolutionalMultiheadAttention(Module):
     to :attr:`embed_dim` such that query, key, and value have the same
     number of features.
 
-    Examples::
-
-        >>> multihead_attn = nn.MultiheadAttention(embed_dim, num_heads)
-        >>> attn_output, attn_output_weights = multihead_attn(query, key, value)
     """
     __constants__ = ['batch_first']
     bias_k: Optional[torch.Tensor]
     bias_v: Optional[torch.Tensor]
 
-    def __init__(self, embed_dim, num_heads, kernel_size=3, dropout=0., bias=True, add_bias_kv=False, add_zero_attn=False,
+    def __init__(self, embed_dim, num_heads, kernel_size=3, dropout=0., bias=True, add_bias_kv=False,
+                 add_zero_attn=False,
                  kdim=None, vdim=None, batch_first=False, device=None, dtype=None) -> None:
         factory_kwargs = {'device': device, 'dtype': dtype}
         super(ConvolutionalMultiheadAttention, self).__init__()
@@ -93,7 +90,7 @@ class ConvolutionalMultiheadAttention(Module):
         self.conv = nn.Conv1d(in_channels=embed_dim, out_channels=embed_dim, kernel_size=(self.kernel_size,),
                               stride=(1,))
         self.conv2 = nn.Conv1d(in_channels=embed_dim, out_channels=embed_dim, kernel_size=(self.kernel_size,),
-                              stride=(1,))
+                               stride=(1,))
 
     def _reset_parameters(self):
         if self._qkv_same_embed_dim:
@@ -369,32 +366,40 @@ class TimeSeriesTransformerWithConvolutionalAttention(nn.Module):
                  dim_feedforward: int, dropout: float, attention_heads: int):
         super().__init__()
         factory_kwargs = {'device': 'cuda'}
+
         # initialize the encoder with convolutional self attention
         encoder_layer = TransformerEncoderLayerWithConvolutionalAttention(d_model, attention_heads, dim_feedforward,
-                                                                          dropout,
-                                                                          "relu", 1e-5, True,
-                                                                          **factory_kwargs)
+                                                                          dropout, 'relu', 1e-5, True, **factory_kwargs)
         encoder_norm = nn.LayerNorm(d_model, eps=1e-5, **factory_kwargs)
         encoder = nn.TransformerEncoder(encoder_layer, num_encoder_layers, encoder_norm)
 
         # initialize the decoder with convolutional self attention
         decoder_layer = TransformerDecoderLayerWithConvolutionalAttention(d_model, attention_heads, dim_feedforward,
-                                                                          dropout,
-                                                                          "relu", 1e-5, True,
-                                                                          **factory_kwargs)
+                                                                          dropout, 'relu', 1e-5, True, **factory_kwargs)
         decoder_norm = LayerNorm(d_model, eps=1e-5, **factory_kwargs)
         decoder = TransformerDecoder(decoder_layer, num_decoder_layers, decoder_norm)
 
         self.transformer = nn.Transformer(d_model, attention_heads, num_encoder_layers, num_decoder_layers,
                                           custom_encoder=encoder, custom_decoder=decoder,
                                           batch_first=True, dim_feedforward=dim_feedforward, dropout=dropout)
-        # self.projection = MultipleLinearLayers(d_model, 48)
+
         self.projection = nn.Linear(d_model, 1, bias=True)
         self.encoder_embedding = TotalEmbedding(d_model, 1, input_features_count - 1, dropout)
         self.decoder_embedding = TotalEmbedding(d_model, 1, input_features_count - 1, dropout)
         self.relu = nn.ReLU()
 
-    def forward(self, x_enc, x_dec, src_mask=None, tgt_mask=None, dec_enc_mask=None):
+    def forward(self, x_enc, x_dec, src_mask=None, tgt_mask=None):
+        """
+        Executes the model for the given input. The raw encoder and decoder input is embedded to the model's dimension
+        and a positional encoding added. Then, the transformer part with the encoder and decoder is executed and the
+        prediction is generated with a linear layer.
+
+        :param x_enc: the raw input for the encoder, shape: [batch_size, seq_enc_length, features]
+        :param x_dec: the raw input for the decoder, shape: [batch_size, seq_dec_length, features]
+        :param src_mask: mask for the encoder (optional, is normally not needed)
+        :param tgt_mask: mask for the decoder (optional, normally needed)
+        :returns: the predictions of shape: [batch_size, seq_dec_length, 1]
+        """
         enc_embedding = self.encoder_embedding(x_enc)
         dec_embedding = self.decoder_embedding(x_dec)
         out = self.transformer(enc_embedding, dec_embedding, src_mask=src_mask, tgt_mask=tgt_mask)
