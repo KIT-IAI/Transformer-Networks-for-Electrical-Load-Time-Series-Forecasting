@@ -125,4 +125,4 @@ venv.bak/
 dmypy.json
 
 # datasets
-/data
+/data/opsd-time_series-2020-10-06

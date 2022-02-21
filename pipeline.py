@@ -26,7 +26,7 @@ from models.wrappers.sklearn_model_wrapper import SklearnModelWrapper
 # dataset related constants
 UTC_TIMESTAMP = 'utc_timestamp'
 TARGET_VARIABLE = 'DE_transnetbw_load_actual_entsoe_transparency'
-PATH_TO_CSV = os.path.join('data', 'opsd', 'time_series_15min_singleindex.csv')
+PATH_TO_CSV = os.path.join('data', 'opsd-time_series-2020-10-06', 'time_series_15min_singleindex.csv')
 
 
 class Pipeline:
