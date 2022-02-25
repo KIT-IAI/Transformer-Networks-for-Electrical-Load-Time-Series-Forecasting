@@ -10,18 +10,44 @@ from torch.nn import MultiheadAttention
 from models.tranformers.transformer import TotalEmbedding
 
 
+#
+# This code part is based on the implementation of the Informer paper by Haoyi Zhou, Shanghang Zhang, Jieqi Peng,
+# Shuai Zhang, Jianxin Li, Hui Xiong and Wancai Zhang. https://github.com/zhouhaoyi/Informer2020
+#
+
+
 class ProbMask:
-    def __init__(self, B, H, L, index, scores, device="cpu"):
-        _mask = torch.ones(L, scores.shape[-1], dtype=torch.bool).to(device).triu(1)
-        _mask_ex = _mask[None, None, :].expand(B, H, L, scores.shape[-1])
-        indicator = _mask_ex[torch.arange(B)[:, None, None],
-                    torch.arange(H)[None, :, None],
-                    index, :].to(device)
+    def __init__(self, b, h, l, index, scores, device='cpu'):
+        _mask = torch.ones(l, scores.shape[-1], dtype=torch.bool).to(device).triu(1)
+        _mask_ex = _mask[None, None, :].expand(b, h, l, scores.shape[-1])
+        indicator = _mask_ex[torch.arange(b)[:, None, None], torch.arange(h)[None, :, None], index, :].to(device)
         self._mask = indicator.view(scores.shape).to(device)
 
     @property
     def mask(self):
         return self._mask
+
+
+def prob_qk(q, k, sample_k, n_top):  # n_top: c*ln(L_q)
+    # Q [B, H, L, D]
+    b, h, l_k, e = k.shape
+    _, _, l_q, _ = q.shape
+
+    # calculate the sampled Q_K
+    k_expand = k.unsqueeze(-3).expand(b, h, l_q, l_k, e)
+    index_sample = torch.randint(l_k, (l_q, sample_k))  # real U = U_part(factor*ln(L_k))*L_q
+    k_sample = k_expand[:, :, torch.arange(l_q).unsqueeze(1), index_sample, :]
+    q_k_sample = torch.matmul(q.unsqueeze(-2), k_sample.transpose(-2, -1)).squeeze(-2)
+
+    # find the Top_k query with sparsity measurement
+    m = q_k_sample.max(-1)[0] - torch.div(q_k_sample.sum(-1), l_k)
+    m_top = m.topk(n_top, sorted=False)[1]
+
+    # use the reduced Q to calculate Q_K
+    q_reduce = q[torch.arange(b)[:, None, None], torch.arange(h)[None, :, None], m_top, :]  # factor*ln(L_q)
+    q_k = torch.matmul(q_reduce, k.transpose(-2, -1))  # factor*ln(L_q)*L_k
+
+    return q_k, m_top
 
 
 class ProbAttention(nn.Module):
@@ -41,98 +67,74 @@ class ProbAttention(nn.Module):
         self.key_projection = nn.Linear(d_model, d_keys * n_heads)
         self.value_projection = nn.Linear(d_model, d_values * n_heads)
 
-    def _prob_QK(self, Q, K, sample_k, n_top):  # n_top: c*ln(L_q)
-        # Q [B, H, L, D]
-        B, H, L_K, E = K.shape
-        _, _, L_Q, _ = Q.shape
-
-        # calculate the sampled Q_K
-        K_expand = K.unsqueeze(-3).expand(B, H, L_Q, L_K, E)
-        index_sample = torch.randint(L_K, (L_Q, sample_k))  # real U = U_part(factor*ln(L_k))*L_q
-        K_sample = K_expand[:, :, torch.arange(L_Q).unsqueeze(1), index_sample, :]
-        Q_K_sample = torch.matmul(Q.unsqueeze(-2), K_sample.transpose(-2, -1)).squeeze(-2)
-
-        # find the Top_k query with sparisty measurement
-        M = Q_K_sample.max(-1)[0] - torch.div(Q_K_sample.sum(-1), L_K)
-        M_top = M.topk(n_top, sorted=False)[1]
-
-        # use the reduced Q to calculate Q_K
-        Q_reduce = Q[torch.arange(B)[:, None, None],
-                   torch.arange(H)[None, :, None],
-                   M_top, :]  # factor*ln(L_q)
-        Q_K = torch.matmul(Q_reduce, K.transpose(-2, -1))  # factor*ln(L_q)*L_k
-
-        return Q_K, M_top
-
-    def _get_initial_context(self, V, L_Q):
-        B, H, L_V, D = V.shape
+    def _get_initial_context(self, v, l_q):
+        b, h, l_v, d = v.shape
         if not self.mask_flag:
             # V_sum = V.sum(dim=-2)
-            V_sum = V.mean(dim=-2)
-            contex = V_sum.unsqueeze(-2).expand(B, H, L_Q, V_sum.shape[-1]).clone()
+            v_sum = v.mean(dim=-2)
+            context = v_sum.unsqueeze(-2).expand(b, h, l_q, v_sum.shape[-1]).clone()
         else:  # use mask
-            assert (L_Q == L_V)  # requires that L_Q == L_V, i.e. for self-attention only
-            contex = V.cumsum(dim=-2)
-        return contex
+            assert (l_q == l_v)  # requires that L_Q == L_V, i.e. for self-attention only
+            context = v.cumsum(dim=-2)
+        return context
 
-    def _update_context(self, context_in, V, scores, index, L_Q, attn_mask):
-        B, H, L_V, D = V.shape
+    def _update_context(self, context_in, v, scores, index, l_q):
+        b, h, l_v, d = v.shape
 
         if self.mask_flag:
-            attn_mask = ProbMask(B, H, L_Q, index, scores, device=V.device)
+            attn_mask = ProbMask(b, h, l_q, index, scores, device=v.device)
             scores.masked_fill_(attn_mask.mask, -np.inf)
 
         attn = torch.softmax(scores, dim=-1)  # nn.Softmax(dim=-1)(scores)
 
-        context_in[torch.arange(B)[:, None, None],
-        torch.arange(H)[None, :, None],
-        index, :] = torch.matmul(attn, V).type_as(context_in)
+        context_in[torch.arange(b)[:, None, None], torch.arange(h)[None, :, None], index, :] \
+            = torch.matmul(attn, v).type_as(context_in)
         if self.output_attention:
-            attns = (torch.ones([B, H, L_V, L_V]) / L_V).type_as(attn).to(attn.device)
-            attns[torch.arange(B)[:, None, None], torch.arange(H)[None, :, None], index, :] = attn
-            return (context_in, attns)
+            attns = (torch.ones([b, h, l_v, l_v]) / l_v).type_as(attn).to(attn.device)
+            attns[torch.arange(b)[:, None, None], torch.arange(h)[None, :, None], index, :] = attn
+            return context_in, attns
         else:
-            return (context_in, None)
+            return context_in, None
 
-    def forward(self, queries, keys, values, attn_mask):
-        B, L, _ = queries.shape
-        _, S, _ = keys.shape
-        H = self.n_heads
+    def forward(self, queries, keys, values):
+        b, l, _ = queries.shape
+        _, s, _ = keys.shape
+        h = self.n_heads
 
-        queries = self.query_projection(queries).view(B, L, H, -1)
-        keys = self.key_projection(keys).view(B, S, H, -1)
-        values = self.value_projection(values).view(B, S, H, -1)
+        queries = self.query_projection(queries).view(b, l, h, -1)
+        keys = self.key_projection(keys).view(b, s, h, -1)
+        values = self.value_projection(values).view(b, s, h, -1)
 
-        B, L_Q, H, D = queries.shape
-        _, L_K, _, _ = keys.shape
+        b, l_q, h, d = queries.shape
+        _, l_k, _, _ = keys.shape
 
         queries = queries.transpose(2, 1)
         keys = keys.transpose(2, 1)
         values = values.transpose(2, 1)
 
-        U_part = self.factor * np.ceil(np.log(L_K)).astype('int').item()  # c*ln(L_k)
-        u = self.factor * np.ceil(np.log(L_Q)).astype('int').item()  # c*ln(L_q)
+        u_part = self.factor * np.ceil(np.log(l_k)).astype('int').item()  # c*ln(L_k)
+        u = self.factor * np.ceil(np.log(l_q)).astype('int').item()  # c*ln(L_q)
 
-        U_part = U_part if U_part < L_K else L_K
-        u = u if u < L_Q else L_Q
+        u_part = u_part if u_part < l_k else l_k
+        u = u if u < l_q else l_q
 
-        scores_top, index = self._prob_QK(queries, keys, sample_k=U_part, n_top=u)
+        scores_top, index = prob_qk(queries, keys, sample_k=u_part, n_top=u)
 
         # add scale factor
-        scale = self.scale or 1. / sqrt(D)
+        scale = self.scale or 1. / sqrt(d)
         if scale is not None:
             scores_top = scores_top * scale
         # get the context
-        context = self._get_initial_context(values, L_Q)
+        context = self._get_initial_context(values, l_q)
         # update the context with selected top_k queries
-        context, attn = self._update_context(context, values, scores_top, index, L_Q, attn_mask)
+        context, attn = self._update_context(context, values, scores_top, index, l_q)
 
-        return context.transpose(2, 1).contiguous().view(B, L, -1), attn
+        return context.transpose(2, 1).contiguous().view(b, l, -1), attn
 
 
 class DecoderLayer(nn.Module):
     def __init__(self, self_attention, cross_attention, d_model, d_ff=None,
-                 dropout=0.1, activation="relu"):
+                 dropout=0.1, activation='relu'):
         super(DecoderLayer, self).__init__()
         d_ff = d_ff or 4 * d_model
         self.self_attention = self_attention
@@ -143,7 +145,7 @@ class DecoderLayer(nn.Module):
         self.norm2 = nn.LayerNorm(d_model)
         self.norm3 = nn.LayerNorm(d_model)
         self.dropout = nn.Dropout(dropout)
-        self.activation = F.relu if activation == "relu" else F.gelu
+        self.activation = F.relu if activation == 'relu' else F.gelu
 
     def forward(self, x, cross, x_mask=None, cross_mask=None):
         x = x + self.dropout(self.self_attention(
@@ -203,7 +205,7 @@ class ConvLayer(nn.Module):
 
 
 class EncoderLayer(nn.Module):
-    def __init__(self, attention, d_model, d_ff=None, dropout=0.1, activation="relu"):
+    def __init__(self, attention, d_model, d_ff=None, dropout=0.1, activation='relu'):
         super(EncoderLayer, self).__init__()
         d_ff = d_ff or 4 * d_model
         self.attention = attention
@@ -212,7 +214,7 @@ class EncoderLayer(nn.Module):
         self.norm1 = nn.LayerNorm(d_model)
         self.norm2 = nn.LayerNorm(d_model)
         self.dropout = nn.Dropout(dropout)
-        self.activation = F.relu if activation == "relu" else F.gelu
+        self.activation = F.relu if activation == 'relu' else F.gelu
 
     def forward(self, x, attn_mask=None):
         # x [B, L, D]
@@ -267,7 +269,7 @@ class EncoderStack(nn.Module):
         self.encoders = nn.ModuleList(encoders)
         self.inp_lens = inp_lens
 
-    def forward(self, x, attn_mask=None):
+    def forward(self, x):
         # x [B, L, D]
         x_stack = []
         attns = []
@@ -330,75 +332,12 @@ class Informer(nn.Module):
         )
         self.projection = nn.Linear(d_model, 1, bias=True)
 
-    def forward(self, encoder_input, decoder_input, enc_self_mask=None, tgt_mask=None, dec_enc_mask=None):
+    def forward(self, encoder_input, decoder_input, enc_self_mask=None, tgt_mask=None):
         enc_out = self.enc_embedding(encoder_input)
         enc_out, attns = self.encoder(enc_out, attn_mask=enc_self_mask)
 
         dec_out = self.dec_embedding(decoder_input)
         dec_out = self.decoder(dec_out, enc_out, x_mask=tgt_mask)
-        dec_out = self.projection(dec_out)
-
-        return dec_out
-
-
-class InformerStack(nn.Module):
-    def __init__(self, input_features_count: int, d_model=512, n_heads=8, e_layers=None, d_layers=2, d_ff=512,
-                 dropout=0.0, attn='prob', activation='gelu', output_attention=False, distil=True,
-                 device=torch.device('cuda:0')):
-        super(InformerStack, self).__init__()
-        if e_layers is None:
-            e_layers = [3, 2, 1]
-        self.attn = attn
-        self.output_attention = output_attention
-
-        # Encoding
-        self.enc_embedding = TotalEmbedding(d_model, 1, input_features_count - 1, dropout)
-        self.dec_embedding = TotalEmbedding(d_model, 1, input_features_count - 1, dropout)
-
-        # Encoder
-        inp_lens = list(range(len(e_layers)))  # [0,1,2,...] you can customize here
-        encoders = [
-            Encoder(
-                [
-                    EncoderLayer(
-                        MultiheadAttention(d_model, n_heads, dropout=dropout, batch_first=True, device=device),
-                        d_model,
-                        d_ff,
-                        dropout=dropout,
-                        activation=activation
-                    ) for _ in range(el)
-                ],
-                [
-                    ConvLayer(
-                        d_model
-                    ) for _ in range(el - 1)
-                ] if distil else None,
-                norm_layer=torch.nn.LayerNorm(d_model)
-            ) for el in e_layers]
-        self.encoder = EncoderStack(encoders, inp_lens)
-        # Decoder
-        self.decoder = Decoder(
-            [
-                DecoderLayer(
-                    MultiheadAttention(d_model, n_heads, dropout=dropout, batch_first=True, device=device),
-                    MultiheadAttention(d_model, n_heads, dropout=dropout, batch_first=True, device=device),
-                    d_model,
-                    d_ff,
-                    dropout=dropout,
-                    activation=activation,
-                )
-                for _ in range(d_layers)
-            ],
-            norm_layer=torch.nn.LayerNorm(d_model)
-        )
-        self.projection = nn.Linear(d_model, 1, bias=True)
-
-    def forward(self, encoder_input, decoder_input, enc_self_mask=None, tgt_mask=None, dec_enc_mask=None):
-        enc_out = self.enc_embedding(encoder_input)
-        enc_out, attns = self.encoder(enc_out, attn_mask=enc_self_mask)
-
-        dec_out = self.dec_embedding(decoder_input)
-        dec_out = self.decoder(dec_out, enc_out, x_mask=tgt_mask, cross_mask=dec_enc_mask)
         dec_out = self.projection(dec_out)
 
         return dec_out

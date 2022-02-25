@@ -27,10 +27,9 @@ class PytorchNeuralNetModelWrapper(BaseModelWrapper, ABC):
 
         criterion = L1Loss()
         optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.args.learning_rate)
-        scheduler = StepLR(optimizer, self.args.learning_rate_scheduler_step,
-                           self.args.learning_rate_scheduler_gamma)
-        trainer = NeuralNetTrainer(train_dl, validation_dl, self.model, criterion, optimizer,
-                                   self.args.max_epochs, scheduler, self.args)
+        scheduler = StepLR(optimizer, self.args.learning_rate_scheduler_step, self.args.learning_rate_scheduler_gamma)
+        trainer = NeuralNetTrainer(train_dl, validation_dl, self.model, criterion, optimizer, self.args.max_epochs,
+                                   scheduler, self.args)
         return trainer.train()
 
     def predict(self, dataset: StandardDataset) -> (torch.Tensor, torch.Tensor):

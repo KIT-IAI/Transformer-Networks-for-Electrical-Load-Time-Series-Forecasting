@@ -50,22 +50,25 @@ class PytorchTransformerModelWrapper(BaseModelWrapper, ABC):
                 expected = decoder_input[:, self.args.transformer_labels_count:, 0]
                 target = torch.cat([target, expected], dim=0)
 
+                # there are three possible training methods: teacher-forcing, one step ahead and the generative approach
                 if self.args.transformer_use_teacher_forcing:
                     expected = decoder_input[:, self.args.transformer_labels_count:, 0].detach().clone().to(device)
                     decoder_input[:, 1:, 0] = decoder_input[:, :-1, 0]  # shift one step the target to the right
 
+                    # iterate autoregressive for each forecast
                     start_decoder_input = decoder_input[:, :self.args.transformer_labels_count + 1, :].to(device)
-                    for i in range(1, 25):
+                    for i in range(1, 1 + + self.args.forecasting_horizon):
                         target_mask = create_mask(start_decoder_input.shape[1]).to(device)
                         predicted = self.model(encoder_input, start_decoder_input, tgt_mask=target_mask).to(device)
-                        if i == 24:
-                            known_decoder_input = torch.zeros(start_decoder_input.shape[0], 1, start_decoder_input.shape[2] - 1).to(device)
+                        if i == + self.args.forecasting_horizon:
+                            known_decoder_input = torch.zeros(
+                                start_decoder_input.shape[0], 1, start_decoder_input.shape[2] - 1).to(device)
                         else:
                             known_decoder_input = decoder_input[:, self.args.transformer_labels_count + i:
-                                                                   self.args.transformer_labels_count + i + 1, 1:].to(
-                                device)
+                                                                   self.args.transformer_labels_count + i + 1, 1:] \
+                                .to(device)
                         new_predicted = predicted[:,
-                                        self.args.transformer_labels_count + i -1:self.args.transformer_labels_count + i,
+                                        self.args.transformer_labels_count + i - 1:self.args.transformer_labels_count + i,
                                         0:1].to(device)
                         predicted = torch.cat([new_predicted, known_decoder_input], dim=2).to(device)
                         start_decoder_input = torch.cat([start_decoder_input[:, :, :], predicted], dim=1).to(device)
@@ -93,6 +96,7 @@ class PytorchTransformerModelWrapper(BaseModelWrapper, ABC):
                     accumulated_decoder_input = accumulated_decoder_input.to(device)
                     accumulated_encoder_input = accumulated_encoder_input.to(device)
 
+                    # iterate autoregressive for each forecast
                     for i in range(0, self.args.forecasting_horizon):
                         target_mask = create_mask(self.args.transformer_labels_count).to(device)
                         new_prediction = torch.reshape(
@@ -115,8 +119,8 @@ class PytorchTransformerModelWrapper(BaseModelWrapper, ABC):
                     o1 = decoder_input[:, :self.args.transformer_labels_count, 0:1]
                     o2 = torch.zeros([batch_size, self.args.forecasting_horizon, 1]).to(device)
                     adjusted_decoder_input = torch.cat([torch.cat([o1, o2], dim=1), u], dim=2).to(device)
-                    target_mask = create_mask(self.args.transformer_labels_count + self.args.forecasting_horizon).to(
-                        device)
+                    target_mask = create_mask(self.args.transformer_labels_count + self.args.forecasting_horizon) \
+                        .to(device)
 
                     predicted = torch.reshape(self.model(encoder_input, adjusted_decoder_input, tgt_mask=target_mask),
                                               torch.Size([batch_size, self.args.transformer_labels_count
