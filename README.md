@@ -1,4 +1,14 @@
-# Transformer Networks for EnergyTime-Series Forecasting
+# Transformer Networks for Energy Time-Series Forecasting
+
+---
+
+## Abstract
+
+Accurate forecasts are of critical importance for Transmission System Operators (TSOs) to match electricity supply and demand. Under- or overestimating the electricity demand can lead to an unstable energy grid, potentially evolving into electricity outages. Since renewable energy sources can be detached more quickly than conventional energy sources, an overestimation of the electricity load can lead to unused renewable energy sources.
+    
+This thesis investigates whether Transformer based architectures outperform relevant baselines in electricity load time-series forecasting. Different Transformer based architectures are implemented and evaluated on electricity load data in Baden-Württemberg (TransnetBW) against baselines for 24 and 96 hours forecasting horizons.
+    
+Our experiments reveal that Transformer architectures statistically significantly outperform baselines, especially for longer forecasting horizons. Furthermore, we show that the more sophisticated Convolutional Self-Attention Transformer and Informer beat the Basic Transformer for electricity load time-series forecasting.
 
 ---
 
