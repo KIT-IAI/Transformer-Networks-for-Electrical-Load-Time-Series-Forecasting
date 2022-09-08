@@ -1,3 +1,5 @@
+from typing import List
+
 import math
 
 import torch
@@ -103,3 +105,15 @@ class TimeSeriesTransformer(nn.Module):
         out = self.transformer(enc_embedding, dec_embedding, src_mask=src_mask, tgt_mask=tgt_mask)
         out = self.projection(self.relu(out))
         return out
+
+    def get_cross_attention_scores(self):
+        return average_attention_scores([layer.multihead_attn.attention_weights
+                                         for layer in self.transformer.decoder.layers])
+
+    def get_self_attention_scores(self):
+        return average_attention_scores([layer.self_attn.attention_weights
+                                         for layer in self.transformer.decoder.layers])
+
+
+def average_attention_scores(attention_scores: List[torch.Tensor]):
+    return torch.mean(torch.stack(attention_scores), dim=0)

@@ -12,6 +12,9 @@ from workalendar.europe import BadenWurttemberg
 from data_loading.time_features import generate_cyclical_time_value, convert_datetime_to_hour_of_the_week
 
 
+WEEK_IN_HOURS = 7 * 24
+
+
 class TransformerDataset(Dataset, ABC):
     """
     The TransformerDataset provides the functionality to prepare the data and load data point by index. It is intended
@@ -62,25 +65,33 @@ class TransformerDataset(Dataset, ABC):
         Prepares the time-series data.
         """
         # extract the unprocessed time series
-        load_data = np.array(self._df[self._target_variable][::4])  # use hourly resolution
+        load_data = np.mean(np.array(self._df[self._target_variable]).reshape((-1, 4)), axis=1)  # average of 4 values
         time_stamps = np.array(self._df[self._time_variable][::4])
 
         # scale the values
-        if self._is_training_set:
-            scaled_load_data = self._time_series_scaler \
-                .fit_transform(load_data.reshape(-1, 1)) \
-                .flatten()
+        if self._time_series_scaler:
+            if self._is_training_set:
+                scaled_load_data = self._time_series_scaler \
+                    .fit_transform(load_data.reshape(-1, 1)) \
+                    .flatten()
+            else:
+                scaled_load_data = self._time_series_scaler \
+                    .transform(load_data.reshape(-1, 1)) \
+                    .flatten()
         else:
-            scaled_load_data = self._time_series_scaler \
-                .transform(load_data.reshape(-1, 1)) \
-                .flatten()
+            scaled_load_data = load_data
 
         self.rows = []
         for index in range(0, len(time_stamps)):
             load_data_value = scaled_load_data[index]
             time_stamp = time_stamps[index]
-            hour_of_the_day_context = generate_cyclical_time_value(time_stamp.hour, 23)
-            hour_of_the_week_context = generate_cyclical_time_value(convert_datetime_to_hour_of_the_week(time_stamp), 6)
+            hour_of_the_day_context = generate_cyclical_time_value(time_stamp.hour, 24)
+            #hour_of_the_week_context = generate_cyclical_time_value(
+            #    time_stamp.weekday(), 7)
+            #hour_of_the_week_context = generate_cyclical_time_value(
+            #    convert_datetime_to_hour_of_the_week(time_stamp), 6)
+            #hour_of_the_week_context = generate_cyclical_time_value(time_stamp.weekday(), 7)
+            #hour_of_the_week_context = generate_cyclical_time_value(convert_datetime_to_hour_of_the_week(time_stamp), 6)
             week_of_the_year_context = generate_cyclical_time_value(time_stamp.weekofyear, 53)
 
             calendar = BadenWurttemberg()
@@ -93,8 +104,8 @@ class TransformerDataset(Dataset, ABC):
 
             row = [
                 load_data_value,
-                hour_of_the_week_context[0], hour_of_the_week_context[1],
                 hour_of_the_day_context[0], hour_of_the_day_context[1],
+                #hour_of_the_week_context[0], hour_of_the_week_context[1],
                 week_of_the_year_context[0], week_of_the_year_context[1],
                 is_christmas_time,
                 is_workday_context,

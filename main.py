@@ -17,14 +17,20 @@ def parse_arguments() -> argparse.Namespace:
                         choices=['LinearRegression', 'SimpleNeuralNet', 'TimeSeriesTransformer',
                                  'TimeSeriesTransformerWithConvolutionalAttention', 'Informer'],
                         help="Determines which model is executed.")
+    parser.add_argument("--model_name", type=str, required=False, default=None)
 
     # problem specification
-    parser.add_argument('--forecasting_horizon', type=int, required=False, default=24,
+    parser.add_argument('--forecasting_horizon', type=int, required=False, default=96,
                         help="How far the prediction reaches.")
     parser.add_argument('--predict_single_value', type=bool, required=False, default=False,
                         help="Indicates whether a single value is the target.")
     parser.add_argument('--time_series_window', type=int, required=False, default=168,
                         help="How many historical values of the time series are used as input for a forecast.")
+
+    ## NN and regression dataset settings
+    parser.add_argument('--one_hot_time_variables', type=bool, required=False, default=False,
+                        help="Whether to one-hot-encode the hour of the day and day of the week. "
+                             "If false, cyclical encoding is used.")
 
     # general learning settings
     parser.add_argument('--include_time_context', type=bool, required=False, default=True,
@@ -45,9 +51,13 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument('--learning_rate_scheduler_step', type=int, required=False, default=2)
     parser.add_argument('--learning_rate_scheduler_gamma', type=float, required=False, default=0.1)
 
+    # simple NN setting
+    parser.add_argument("--nn_layers", type=int, required=False, default=2)
+    parser.add_argument("--nn_units", type=int, required=False, default=2048)
+
     # transformer setting
     parser.add_argument('--transformer_d_model', type=int, required=False, default=160)
-    parser.add_argument('--transformer_input_features_count', type=int, required=False, default=12)
+    parser.add_argument('--transformer_input_features_count', type=int, required=False, default=10)
     parser.add_argument('--transformer_num_encoder_layers', type=int, required=False, default=3)
     parser.add_argument('--transformer_num_decoder_layers', type=int, required=False, default=3)
     parser.add_argument('--transformer_dim_feedforward', type=int, required=False, default=160)

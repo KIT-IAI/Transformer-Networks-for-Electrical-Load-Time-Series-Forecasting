@@ -9,7 +9,7 @@ from training.trainer import TrainingReport
 
 JSON_FILE_ENDING = '.json'
 EXPERIMENTS_DIRECTORY = 'experiments'
-FINAL_EXPERIMENTS_DIRECTORY = 'final'
+FINAL_EXPERIMENTS_DIRECTORY = '2022-09-08'
 
 
 class Experiment:
@@ -18,11 +18,13 @@ class Experiment:
     """
 
     def __init__(self, model_wrapper: BaseModelWrapper, evaluation: Evaluation, training_config: argparse.Namespace,
-                 training_report: TrainingReport):
+                 training_report: TrainingReport, training_time: float, test_time: float):
         self.model_wrapper = model_wrapper
         self.evaluation = evaluation
         self.training_config = training_config
         self.training_report = training_report
+        self.training_time = training_time
+        self.test_time = test_time
 
     def save_to_json_file(self) -> None:
         """
@@ -46,7 +48,9 @@ class Experiment:
             'modelWrapper': str(self.model_wrapper),
             'trainingConfig': self.training_config.__dict__,
             'trainingReport': serialized_training_report,
-            'evaluation': self.evaluation.serialize()
+            'evaluation': self.evaluation.serialize(),
+            'training_time': self.training_time,
+            'test_time': self.test_time
         }
 
         file_path = os.path.join(EXPERIMENTS_DIRECTORY, FINAL_EXPERIMENTS_DIRECTORY, experiment_name + JSON_FILE_ENDING)

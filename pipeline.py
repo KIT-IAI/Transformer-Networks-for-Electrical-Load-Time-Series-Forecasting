@@ -4,9 +4,12 @@ import os
 from pathlib import Path
 
 import numpy as np
+import torch
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
 from torch.utils.data import Dataset
+import pickle
+import time
 
 from data_loading.standard_dataset import StandardDataset
 from data_loading.time_series import TimeSeriesDataframeLoader, TimeInterval
@@ -47,17 +50,20 @@ class Pipeline:
         self.predict_single_value = args.predict_single_value
         self.window_length = args.time_series_window
         self.include_time_context = args.include_time_context
+        self.one_hot_time_variables = args.one_hot_time_variables
 
         self.args = args
 
         self.experiment = None
 
-    def start(self) -> None:
+    def start(self, run_experiment: bool = True) -> None:
         """
         Starts the pipeline calculations.
         First, the dataset is loaded, split into train, validation and test set, and preprocessed. Afterward, the models
         are trained depending on their underlying architecture. Last, the model is evaluated.
         """
+
+        model = None
 
         # Load the data and it split into subsets
         dfl = TimeSeriesDataframeLoader(Path(PATH_TO_CSV), UTC_TIMESTAMP, TARGET_VARIABLE)
@@ -74,30 +80,33 @@ class Pipeline:
 
         # differentiate between the different architecture types (Transformers need other data format)
         if not self.model_type.is_transformer_model():
-            # convert the the raw data into the preprocessed datasets
+            # convert the raw data into the preprocessed datasets
             train_dataset: StandardDataset = StandardDataset(train, UTC_TIMESTAMP, TARGET_VARIABLE, self.window_length,
                                                              self.forecasting_horizon, self.predict_single_value,
-                                                             self.include_time_context, scaler, True)
+                                                             self.include_time_context, scaler, True,
+                                                             self.one_hot_time_variables)
             validation_dataset: StandardDataset = StandardDataset(validation, UTC_TIMESTAMP, TARGET_VARIABLE,
                                                                   self.window_length, self.forecasting_horizon,
                                                                   self.predict_single_value, self.include_time_context,
-                                                                  scaler, False)
+                                                                  scaler, False, self.one_hot_time_variables)
             test_dataset: StandardDataset = StandardDataset(test, UTC_TIMESTAMP, TARGET_VARIABLE,
                                                             self.window_length, self.forecasting_horizon,
                                                             self.predict_single_value, self.include_time_context,
-                                                            scaler, False)
+                                                            scaler, False, self.one_hot_time_variables)
 
             # differentiate between Linear Regression and Neural Net, because they are trained with different libraries
             if self.model_type == ModelType.LinearRegression:
                 linear_regression = LinearRegression()
                 model_wrapper = SklearnModelWrapper(linear_regression, self.model_type, self.args)
             else:
-                model = SimpleNeuralNet(train_dataset.get_number_of_input_features(),
-                                        train_dataset.get_number_of_target_variables())
+                model = SimpleNeuralNet(number_of_input_features=train_dataset.get_number_of_input_features(),
+                                        number_of_target_variables=train_dataset.get_number_of_target_variables(),
+                                        number_of_layers=self.args.nn_layers,
+                                        number_of_units=self.args.nn_units)
                 model_wrapper = PytorchNeuralNetModelWrapper(model, self.model_type, self.args)
 
         else:  # Transformer models
-            # convert the the raw data into the preprocessed datasets
+            # convert the raw data into the preprocessed datasets
             train_dataset = TransformerDataset(
                 train, UTC_TIMESTAMP, TARGET_VARIABLE, self.window_length,
                 self.forecasting_horizon, self.args.transformer_labels_count,
@@ -142,20 +151,39 @@ class Pipeline:
 
             model_wrapper = PytorchTransformerModelWrapper(model, self.model_type, self.args)
 
-        # train the model
-        training_report = model_wrapper.train(train_dataset, validation_dataset)
+        if run_experiment:
+            # train the model
+            training_start_time = time.time()
+            training_report = model_wrapper.train(train_dataset, validation_dataset)
+            training_time = time.time() - training_start_time
 
-        # evaluate the model on the test data
-        test_outputs, test_targets = model_wrapper.predict(test_dataset)
-        time_labels: np.ndarray = test_dataset.time_labels
-        evaluator = Evaluator(test_outputs, test_targets, time_labels, scaler, self.forecasting_horizon)
-        evaluation = evaluator.evaluate()
+            # evaluate the model on the test data
+            test_start_time = time.time()
+            test_outputs, test_targets = model_wrapper.predict(test_dataset)
+            test_time = time.time() - test_start_time
+            time_labels: np.ndarray = test_dataset.time_labels
+            evaluator = Evaluator(test_outputs, test_targets, time_labels, scaler, self.forecasting_horizon)
+            evaluation = evaluator.evaluate()
 
-        self.experiment = Experiment(model_wrapper, evaluation, self.args, training_report)
-        print(str(self.experiment))
+            self.experiment = Experiment(model_wrapper, evaluation, self.args, training_report, training_time,
+                                         test_time)
+            print(str(self.experiment))
+            if model is not None:
+                self.save_model(model, scaler)
+        else:
+            self.model = model
 
     def save_to_file(self):
         """
         Saves the completed experiment (pipeline has been run once) to a file.
         """
         self.experiment.save_to_json_file()
+
+    def save_model(self, model, scaler):
+        if self.args.model_name is None:
+            return
+        path = "data/models/" + self.args.model_name
+        torch.save(model, path)
+        with open(path + ".scaler", "wb") as f:
+            pickle.dump(scaler, f)
+        print(f"model saved at {path}")

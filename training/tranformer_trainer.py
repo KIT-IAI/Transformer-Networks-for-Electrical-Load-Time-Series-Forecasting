@@ -36,6 +36,9 @@ class TransformerTrainer(Trainer, ABC):
         for encoder_input, decoder_input in self.train_data_loader:
             encoder_input = encoder_input.to(device)
             decoder_input = decoder_input.to(device)
+            #print(encoder_input.shape, decoder_input.shape)
+            #print(encoder_input[0])
+            #print(decoder_input[0])
             self.optimizer.zero_grad()
 
             # there are three possible training methods: teacher-forcing, one step ahead and the generative approach

@@ -1,5 +1,7 @@
 import datetime
 import math
+import numpy as np
+
 
 DAY_IN_HOURS = 24
 
@@ -27,3 +29,9 @@ def convert_datetime_to_hour_of_the_week(dt: datetime.datetime) -> int:
     :return: the hour of the week in the interval [0, 167]
     """
     return datetime.datetime.weekday(dt) * DAY_IN_HOURS + dt.hour
+
+
+def one_hot_encode(time_value, period_length):
+    encoding = np.zeros(period_length, dtype=int)
+    encoding[time_value] = 1
+    return encoding

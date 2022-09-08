@@ -9,10 +9,13 @@ from sklearn.preprocessing import StandardScaler
 from torch.utils.data import Dataset
 from workalendar.europe import BadenWurttemberg
 
-from data_loading.time_features import generate_cyclical_time_value, convert_datetime_to_hour_of_the_week
+from data_loading.time_features import generate_cyclical_time_value, convert_datetime_to_hour_of_the_week, \
+    one_hot_encode
+
 
 DAY_IN_HOURS = 24
 WEEK_IN_DAYS = 7
+WEEK_IN_HOURS = WEEK_IN_DAYS * DAY_IN_HOURS
 
 
 class StandardDataset(Dataset, ABC):
@@ -27,7 +30,8 @@ class StandardDataset(Dataset, ABC):
 
     def __init__(self, df: pd.DataFrame, time_variable: str, target_variable: str, time_series_window_in_hours: int,
                  forecasting_horizon_in_hours: int, is_single_time_point_prediction: bool,
-                 include_time_information: bool, time_series_scaler: StandardScaler, is_training_set: bool):
+                 include_time_information: bool, time_series_scaler: StandardScaler, is_training_set: bool,
+                 one_hot_time_variables: bool):
         """
         Creates the data-preparer.
 
@@ -48,6 +52,7 @@ class StandardDataset(Dataset, ABC):
         self._include_time_information = include_time_information
         self._time_series_scaler = time_series_scaler
         self._is_training_set = is_training_set
+        self._one_hot_time_variables = one_hot_time_variables
 
         self.prepared_time_series_input: torch.Tensor
         self.prepared_time_series_target: torch.Tensor
@@ -81,18 +86,21 @@ class StandardDataset(Dataset, ABC):
         Prepares the time-series data.
         """
         # extract the unprocessed time series
-        load_data = np.array(self._df[self._target_variable][::4])  # use hourly resolution --> every fourth value
+        load_data = np.mean(np.array(self._df[self._target_variable]).reshape((-1, 4)), axis=1)  # average of 4 values
         time_stamps = np.array(self._df[self._time_variable][::4])
 
         # scale the values
-        if self._is_training_set:
-            scaled_load_data = self._time_series_scaler \
-                .fit_transform(load_data.reshape(-1, 1)) \
-                .flatten()
+        if self._time_series_scaler:
+            if self._is_training_set:
+                scaled_load_data = self._time_series_scaler \
+                    .fit_transform(load_data.reshape(-1, 1)) \
+                    .flatten()
+            else:
+                scaled_load_data = self._time_series_scaler \
+                    .transform(load_data.reshape(-1, 1)) \
+                    .flatten()
         else:
-            scaled_load_data = self._time_series_scaler \
-                .transform(load_data.reshape(-1, 1)) \
-                .flatten()
+            scaled_load_data = load_data
 
         # create the input and target
         time_series = np.array(scaled_load_data, dtype=np.float32)
@@ -106,9 +114,9 @@ class StandardDataset(Dataset, ABC):
                 target_rows.append(time_series[index:index + self._forecasting_horizon_in_hours])
 
             # prepare the input
-            hour_of_the_day_context = []
-            hour_of_the_week_context = []
-            week_of_the_year_context = []
+            day_context = []
+            week_context = []
+            year_context = []
 
             is_workday_context = []
             is_holiday_context = []
@@ -116,9 +124,15 @@ class StandardDataset(Dataset, ABC):
             is_next_day_workday_context = []
             if self._include_time_information:
                 prediction_datetime = time_stamps[index]
-                hour_of_the_day_context = generate_cyclical_time_value(prediction_datetime.hour, DAY_IN_HOURS)
-                hour_of_the_week_context = generate_cyclical_time_value(
-                    convert_datetime_to_hour_of_the_week(prediction_datetime), WEEK_IN_DAYS)
+                if self._one_hot_time_variables:
+                    day_context = one_hot_encode(prediction_datetime.hour, DAY_IN_HOURS)
+                    #week_context = one_hot_encode(prediction_datetime.weekday(), WEEK_IN_DAYS)
+                    year_context = one_hot_encode(prediction_datetime.month - 1, 12)
+                else:
+                    day_context = generate_cyclical_time_value(prediction_datetime.hour, DAY_IN_HOURS)
+                    #week_context = generate_cyclical_time_value(
+                    #    prediction_datetime.weekday(), WEEK_IN_DAYS)
+                    year_context = generate_cyclical_time_value(prediction_datetime.weekofyear, 53)
 
                 calendar = BadenWurttemberg()
                 if self._is_single_time_point_prediction:
@@ -139,10 +153,12 @@ class StandardDataset(Dataset, ABC):
 
             previous_time_series_value: np.array = time_series[index - self._time_series_window_in_hours:index]
             input_row = np.concatenate((previous_time_series_value,
-                                        hour_of_the_day_context,
-                                        hour_of_the_week_context,
-                                        week_of_the_year_context,
-                                        is_workday_context, is_holiday_context, is_previous_day_workday_context,
+                                        day_context,
+                                        week_context,
+                                        year_context,
+                                        is_workday_context,
+                                        is_holiday_context,
+                                        is_previous_day_workday_context,
                                         is_next_day_workday_context))
             input_rows.append(input_row)
         self.prepared_time_series_input = torch.tensor(np.array(input_rows), dtype=torch.float32)
