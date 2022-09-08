@@ -11,6 +11,6 @@ EXPERIMENT_CALLS = [
 
 if __name__ == "__main__":
     NUM_EXPERIMENTS = 10
-    for _ in range(NUM_EXPERIMENTS):
+    for i in range(NUM_EXPERIMENTS):
         for call in EXPERIMENT_CALLS:
-            print(call)
+            print(f"{call} --seed {i}")
