@@ -66,6 +66,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument('--transformer_labels_count', type=int, required=False, default=24)
     parser.add_argument('--transformer_use_teacher_forcing', type=bool, required=False, default=False)
     parser.add_argument('--transformer_use_auto_regression', type=bool, required=False, default=False)
+    parser.add_argument('--conv_transformer_kernel_size', type=int, required=False, default=3)
 
     # other
     parser.add_argument('--seed', type=int, required=False, default=0)

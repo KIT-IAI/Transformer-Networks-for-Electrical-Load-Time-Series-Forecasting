@@ -224,12 +224,12 @@ class TransformerEncoderLayerWithConvolutionalAttention(Module):
     """
     __constants__ = ['batch_first']
 
-    def __init__(self, d_model, nhead, dim_feedforward=2048, dropout=0.1, activation="relu",
+    def __init__(self, d_model, nhead, dim_feedforward=2048, kernel_size=3, dropout=0.1, activation="relu",
                  layer_norm_eps=1e-5, batch_first=False,
                  device=None, dtype=None) -> None:
         factory_kwargs = {'device': device, 'dtype': dtype}
         super(TransformerEncoderLayerWithConvolutionalAttention, self).__init__()
-        self.self_attn = ConvolutionalMultiheadAttention(d_model, nhead, dropout=dropout, batch_first=batch_first,
+        self.self_attn = ConvolutionalMultiheadAttention(d_model, nhead, kernel_size=kernel_size, dropout=dropout, batch_first=batch_first,
                                                          **factory_kwargs)
         # Implementation of Feedforward model
         self.linear1 = Linear(d_model, dim_feedforward, **factory_kwargs)
@@ -363,12 +363,13 @@ class TransformerDecoderLayerWithConvolutionalAttention(Module):
 class TimeSeriesTransformerWithConvolutionalAttention(nn.Module):
 
     def __init__(self, d_model: int, input_features_count: int, num_encoder_layers: int, num_decoder_layers: int,
-                 dim_feedforward: int, dropout: float, attention_heads: int):
+                 dim_feedforward: int, kernel_size: int, dropout: float, attention_heads: int):
         super().__init__()
         factory_kwargs = {'device': 'cuda'}
 
         # initialize the encoder with convolutional self attention
         encoder_layer = TransformerEncoderLayerWithConvolutionalAttention(d_model, attention_heads, dim_feedforward,
+                                                                          kernel_size,
                                                                           dropout, 'relu', 1e-5, True, **factory_kwargs)
         encoder_norm = nn.LayerNorm(d_model, eps=1e-5, **factory_kwargs)
         encoder = nn.TransformerEncoder(encoder_layer, num_encoder_layers, encoder_norm)

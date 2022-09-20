@@ -137,6 +137,7 @@ class Pipeline:
                     num_encoder_layers=self.args.transformer_num_encoder_layers,
                     num_decoder_layers=self.args.transformer_num_decoder_layers,
                     dim_feedforward=self.args.transformer_dim_feedforward,
+                    kernel_size=self.args.conv_transformer_kernel_size,
                     dropout=self.args.transformer_dropout,
                     attention_heads=self.args.transformer_attention_heads)
             else:

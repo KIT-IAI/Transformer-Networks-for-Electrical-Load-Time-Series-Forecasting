@@ -9,7 +9,7 @@ from training.trainer import TrainingReport
 
 JSON_FILE_ENDING = '.json'
 EXPERIMENTS_DIRECTORY = 'experiments'
-FINAL_EXPERIMENTS_DIRECTORY = '2022-09-08'
+FINAL_EXPERIMENTS_DIRECTORY = '2022-09-20'
 
 
 class Experiment:
