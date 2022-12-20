@@ -153,6 +153,7 @@ if __name__ == "__main__":
     axs[1].set_yticks(y_ticks)
     axs[1].set_yticklabels(y_ticklabels)
 
-    plt.savefig(f"plots/attention/attention_{prediction_start_time.weekday()}_{prediction_start_time.hour}.pdf")
+    if "avg" in sys.argv:
+        plt.savefig(f"plots/attention/attention_{prediction_start_time.weekday()}_{prediction_start_time.hour}.pdf")
 
     plt.show()
