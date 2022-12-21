@@ -20,6 +20,12 @@ First, we need a virtual environment like [Anaconda](https://www.anaconda.com/pr
 Additionally, we have to install [CUDA](https://developer.nvidia.com/cuda-downloads) and [PyTorch](https://pytorch.org/get-started/locally).
 After setting them up, we can install the further requirements for the project with the command `pip install -r requirements.txt`.
 
+Note: I had to install the right torch version for my GPU with CUDA 11.3:
+```commandline
+pip uninstall torch
+pip install torch==1.10.0+cu113 --extra-index-url https://download.pytorch.org/whl/cu113
+```
+
 ### Dataset
 The dataset can be downloaded afterwards through executing the command `python download.py` in the data directory.
 The size of the full dataset are about 277 MB.
@@ -36,3 +42,10 @@ Here are the most important ones (detailed list is in main.py):
 - `--forecasting_horizon` : *int* - Indicates the length of the predicted sequence.
 - `--time_series_window` : *int* - Defines the number of historical values of the time series used as input for a forecast.
 The results of a run is stored in the experiments directory in a file, which can be used for further analysis.
+
+## Plot attention scores
+Attention scores can be visualized with `python attention_scores.py`.
+The script has the following arguments:
+- First argument : *int* - The prediction time step in hours. Zero refers to the first prediction time in the test set (2019-01-07 0:00). 
+- Optional flag `avg` - Set this flag to average over all time steps with the same hour of the week.
+For example, `python attention_scores.py 53 avg` plots the attention scores averaged over all Thursdays 5:00.
