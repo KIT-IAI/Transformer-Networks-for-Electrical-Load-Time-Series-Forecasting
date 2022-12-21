@@ -4,6 +4,7 @@ import math
 
 import torch
 from torch import nn, Tensor
+from my_torch import Transformer
 
 
 class ValueEmbedding(nn.Module):
@@ -80,8 +81,8 @@ class TimeSeriesTransformer(nn.Module):
     def __init__(self, d_model: int, input_features_count: int, num_encoder_layers: int, num_decoder_layers: int,
                  dim_feedforward: int, dropout: float, attention_heads: int):
         super().__init__()
-        self.transformer = nn.Transformer(d_model, attention_heads, num_encoder_layers, num_decoder_layers,
-                                          batch_first=True, dim_feedforward=dim_feedforward, dropout=dropout)
+        self.transformer = Transformer(d_model, attention_heads, num_encoder_layers, num_decoder_layers,
+                                       batch_first=True, dim_feedforward=dim_feedforward, dropout=dropout)
 
         self.projection = nn.Linear(d_model, 1, bias=True)
         self.encoder_embedding = TotalEmbedding(d_model, 1, input_features_count - 1, dropout)
